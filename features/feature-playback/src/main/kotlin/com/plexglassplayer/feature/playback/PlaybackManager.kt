@@ -175,6 +175,89 @@ class PlaybackManager @Inject constructor(
         return mediaController?.currentPosition ?: 0L
     }
 
+    /**
+     * Play a specific track from the queue by index
+     */
+    fun playFromQueue(index: Int) {
+        if (index >= 0 && index < _queue.value.size) {
+            mediaController?.seekToDefaultPosition(index)
+            play()
+        }
+    }
+
+    /**
+     * Remove a track from the queue
+     */
+    fun removeFromQueue(index: Int) {
+        if (index >= 0 && index < _queue.value.size && index != _currentIndex.value) {
+            val newQueue = _queue.value.toMutableList()
+            newQueue.removeAt(index)
+            _queue.value = newQueue
+
+            // Rebuild media items
+            val mediaItems = newQueue.map { track ->
+                MediaItem.Builder()
+                    .setUri(track.uri)
+                    .setMediaId(track.trackId)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(track.title)
+                            .setArtist(track.artist)
+                            .setAlbumTitle(track.album)
+                            .setArtworkUri(track.artworkUrl?.let { android.net.Uri.parse(it) })
+                            .build()
+                    )
+                    .build()
+            }
+
+            val currentPos = getCurrentPosition()
+            val currentIdx = _currentIndex.value
+
+            mediaController?.apply {
+                setMediaItems(mediaItems, if (index < currentIdx) currentIdx - 1 else currentIdx, currentPos)
+            }
+
+            if (index < currentIdx) {
+                _currentIndex.value = currentIdx - 1
+            }
+        }
+    }
+
+    /**
+     * Clear the entire queue
+     */
+    fun clearQueue() {
+        mediaController?.stop()
+        mediaController?.clearMediaItems()
+        _queue.value = emptyList()
+        _currentTrack.value = null
+        _currentIndex.value = 0
+    }
+
+    /**
+     * Add track to end of queue
+     */
+    fun addToQueue(track: QueueItem) {
+        val newQueue = _queue.value.toMutableList()
+        newQueue.add(track)
+        _queue.value = newQueue
+
+        val mediaItem = MediaItem.Builder()
+            .setUri(track.uri)
+            .setMediaId(track.trackId)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(track.title)
+                    .setArtist(track.artist)
+                    .setAlbumTitle(track.album)
+                    .setArtworkUri(track.artworkUrl?.let { android.net.Uri.parse(it) })
+                    .build()
+            )
+            .build()
+
+        mediaController?.addMediaItem(mediaItem)
+    }
+
     fun release() {
         mediaController?.release()
         controllerFuture?.let { MediaController.releaseFuture(it) }

@@ -26,6 +26,7 @@ import com.plexglassplayer.feature.playback.NowPlayingScreen
 import com.plexglassplayer.feature.playback.PlaybackManager
 import com.plexglassplayer.feature.search.SearchScreen
 import com.plexglassplayer.feature.server.ServerSelectionScreen
+import com.plexglassplayer.feature.settings.SettingsScreen
 import javax.inject.Inject
 
 @Composable
@@ -90,7 +91,7 @@ fun AppNavigation(
                     navController.navigate(Screen.Downloads.route)
                 },
                 onSettingsClick = {
-                    // TODO: Navigate to settings
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -140,7 +141,16 @@ fun AppNavigation(
         composable(Screen.NowPlaying.route) {
             NowPlayingScreen(
                 onBackClick = { navController.popBackStack() },
+                onQueueClick = { navController.navigate(Screen.Queue.route) },
                 playbackManager = playbackManager
+            )
+        }
+
+        // Queue
+        composable(Screen.Queue.route) {
+            com.plexglassplayer.feature.playback.QueueScreen(
+                playbackManager = playbackManager,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -148,6 +158,18 @@ fun AppNavigation(
         composable(Screen.Downloads.route) {
             DownloadsScreen(
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Settings
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBackClick = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         }
@@ -186,5 +208,7 @@ sealed class Screen(val route: String) {
     }
     data object Search : Screen("search")
     data object NowPlaying : Screen("nowPlaying")
+    data object Queue : Screen("queue")
     data object Downloads : Screen("downloads")
+    data object Settings : Screen("settings")
 }

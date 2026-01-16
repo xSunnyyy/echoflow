@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun NowPlayingScreen(
     onBackClick: () -> Unit,
+    onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
     playbackManager: PlaybackManager
 ) {
@@ -95,10 +96,10 @@ fun NowPlayingScreen(
                     color = Color.White
                     )
 
-                IconButton(onClick = { /* TODO: More options */ }) {
+                IconButton(onClick = onQueueClick) {
                     Icon(
-                        Icons.Default.MoreVert,
-                        "More",
+                        Icons.Default.QueueMusic,
+                        "Queue",
                         tint = Color.White
                     )
                 }
