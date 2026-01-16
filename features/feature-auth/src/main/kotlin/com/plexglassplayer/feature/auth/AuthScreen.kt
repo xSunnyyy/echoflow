@@ -164,7 +164,7 @@ private fun PinGeneratedContent(
                     Text(
                         text = pinData.pinCode,
                         style = MaterialTheme.typography.displayMedium.copy(
-                            letterSpacing = androidx.compose.ui.unit.sp(8)
+                            letterSpacing = 8.sp
                         ),
                         modifier = Modifier.padding(24.dp),
                         color = MaterialTheme.colorScheme.primary
