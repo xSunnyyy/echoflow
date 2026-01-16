@@ -19,6 +19,7 @@ class SettingsViewModel @Inject constructor(
     private val serverPreferences: ServerPreferences
 ) : ViewModel() {
 
+    // Success: Specified the explicit type for MutableStateFlow to resolve inference issues
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -30,12 +31,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val serverUrl = serverPreferences.getActiveServerUrl()
-                // Use the first value from the existing flow for the ID
-                val serverId = serverPreferences.activeServerIdFlow.first() 
-                
-                // Note: Server Name is currently not stored in ServerPreferences
+                val serverId = serverPreferences.activeServerIdFlow.first()
+
+                // Ensure the Success data class exists in the sealed class below
                 _uiState.value = SettingsUiState.Success(
-                    serverName = "Plex Server", // Placeholder or update ServerPreferences
+                    serverName = "Plex Server", 
                     serverUrl = serverUrl ?: "",
                     serverId = serverId ?: ""
                 )
@@ -49,8 +49,7 @@ class SettingsViewModel @Inject constructor(
     fun logout(onLogoutComplete: () -> Unit) {
         viewModelScope.launch {
             try {
-                // Changed from clearSession() to signOut() to match AuthRepository.kt
-                authRepository.signOut() 
+                authRepository.signOut()
                 serverPreferences.clearActiveServer()
                 Timber.d("Logged out successfully")
                 onLogoutComplete()
@@ -70,4 +69,15 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+}
+
+// Fixed: Ensure this sealed class is defined in the same file and package
+sealed class SettingsUiState {
+    data object Loading : SettingsUiState()
+    data class Success(
+        val serverName: String,
+        val serverUrl: String,
+        val serverId: String
+    ) : SettingsUiState()
+    data class Error(val message: String) : SettingsUiState()
 }
