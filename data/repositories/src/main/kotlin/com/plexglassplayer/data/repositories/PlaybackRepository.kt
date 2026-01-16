@@ -44,6 +44,7 @@ class PlaybackRepository @Inject constructor(
 
     /**
      * Build streaming URL for a track
+     * Uses Plex universal music transcoder for compatibility
      */
     private suspend fun buildStreamingUri(track: Track): Uri {
         val baseUrl = serverPreferences.getActiveServerUrl()
@@ -53,10 +54,19 @@ class PlaybackRepository @Inject constructor(
 
         val streamKey = requireStreamKey(track)
 
-        return Uri.parse("$baseUrl$streamKey")
+        // Use Plex universal music transcoder for reliable streaming
+        // Format: /music/:/transcode/universal/start.mp3?path={key}&protocol=http
+        val streamingUrl = Uri.parse("$baseUrl/music/:/transcode/universal/start.mp3")
             .buildUpon()
+            .appendQueryParameter("path", streamKey)
+            .appendQueryParameter("protocol", "http")
+            .appendQueryParameter("audioCodec", "mp3")
+            .appendQueryParameter("audioBitrate", "320")
             .appendQueryParameter("X-Plex-Token", token)
             .build()
+
+        Timber.d("Built streaming URL: $streamingUrl")
+        return streamingUrl
     }
 
     /**
