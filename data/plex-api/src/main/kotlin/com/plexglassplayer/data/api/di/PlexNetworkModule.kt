@@ -22,6 +22,7 @@ object PlexNetworkModule {
 
     @Provides
     @Singleton
+    @PlexTvJson
     fun providePlexJson(): Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -30,23 +31,22 @@ object PlexNetworkModule {
 
     @Provides
     @Singleton
+    @PlexTvLogging
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // Flip to BODY while debugging auth issues
+            level = HttpLoggingInterceptor.Level.BASIC
         }
     }
 
-    /**
-     * Forces Plex to respond with JSON when possible.
-     * This matters a LOT because your DTOs expect JSON.
-     */
     @Provides
     @Singleton
-    fun provideAcceptJsonInterceptor(): Interceptor {
+    fun providePlexHeadersInterceptor(): Interceptor {
         return Interceptor { chain ->
-            val req = chain.request().newBuilder()
+            val original = chain.request()
+            val req = original.newBuilder()
+                // Plex is picky; these help with consistent responses
                 .header("Accept", "application/json")
-                .header("X-Plex-Accept", "application/json")
                 .build()
             chain.proceed(req)
         }
@@ -54,21 +54,23 @@ object PlexNetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        logging: HttpLoggingInterceptor,
-        acceptJson: Interceptor
+    @PlexTvOkHttp
+    fun providePlexOkHttpClient(
+        @PlexTvLogging logging: HttpLoggingInterceptor,
+        plexHeaders: Interceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(acceptJson)
+            .addInterceptor(plexHeaders)
             .addInterceptor(logging)
             .build()
     }
 
     @Provides
     @Singleton
+    @PlexTv
     fun providePlexRetrofit(
-        client: OkHttpClient,
-        json: Json
+        @PlexTvOkHttp client: OkHttpClient,
+        @PlexTvJson json: Json
     ): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
@@ -81,7 +83,7 @@ object PlexNetworkModule {
     @Provides
     @Singleton
     fun providePlexApiService(
-        retrofit: Retrofit
+        @PlexTv retrofit: Retrofit
     ): PlexApiService {
         return retrofit.create(PlexApiService::class.java)
     }
