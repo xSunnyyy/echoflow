@@ -3,41 +3,46 @@ package com.plexglassplayer.data.api.service
 import com.plexglassplayer.data.api.dto.*
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.Headers
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
 
 interface PlexApiService {
 
-    // Auth endpoints (plex.tv)
-    @Headers("Accept: application/json")
-    @GET("api/v2/pins")
+    // -----------------------------
+    // plex.tv auth endpoints
+    // -----------------------------
+
+    // ✅ MUST be POST (GET will 405)
+    @POST("api/v2/pins")
     suspend fun createPin(
         @Header("X-Plex-Client-Identifier") clientId: String,
         @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
-        @Header("X-Plex-Version") version: String = "1.0"
+        @Header("X-Plex-Version") version: String = "1.0",
+        // optional but harmless; some setups use it
+        @Query("strong") strong: Boolean = true
     ): PinResponse
 
-    @Headers("Accept: application/json")
     @GET("api/v2/pins/{pinId}")
     suspend fun checkPin(
         @Path("pinId") pinId: String,
         @Header("X-Plex-Client-Identifier") clientId: String
     ): PinResponse
 
-    // ✅ Resources (servers) endpoint — JSON list
-    @Headers("Accept: application/json")
+    // ✅ JSON list version (recommended)
     @GET("api/v2/resources")
     suspend fun getResources(
         @Header("X-Plex-Token") token: String,
         @Header("X-Plex-Client-Identifier") clientId: String,
         @Query("includeHttps") includeHttps: Int = 1,
-        @Query("includeRelay") includeRelay: Int = 1,
-        @Query("includeIPv6") includeIPv6: Int = 1
+        @Query("includeRelay") includeRelay: Int = 1
     ): List<DeviceDto>
 
+    // -----------------------------
     // Server endpoints (dynamic base URL)
+    // -----------------------------
+
     @GET
     suspend fun getLibrarySections(
         @Url url: String,
