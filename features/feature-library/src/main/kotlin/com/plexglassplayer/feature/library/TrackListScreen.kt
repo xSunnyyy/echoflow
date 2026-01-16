@@ -39,6 +39,7 @@ fun TrackListScreen(
                     }
                 },
                 actions = {
+                    // Check for Success state to show action buttons
                     if (uiState is TrackListUiState.Success) {
                         IconButton(onClick = { viewModel.downloadAll() }) {
                             Icon(Icons.Default.Download, "Download All")
@@ -118,7 +119,7 @@ private fun TrackItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Track number
+            // Track number (prefers metadata, falls back to list index)
             Text(
                 text = "${track.trackNumber ?: trackNumber}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -150,14 +151,14 @@ private fun TrackItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Duration
+            // Duration (Extension function from core-util)
             Text(
                 text = track.durationMs.formatDuration(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // More options
+            // More options Dropdown
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
