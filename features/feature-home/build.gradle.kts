@@ -23,6 +23,9 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    implementation(project(":data:repositories"))
+    implementation(project(":features:feature-playback"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -33,5 +36,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.timber)
     ksp(libs.hilt.compiler)
 }
