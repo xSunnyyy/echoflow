@@ -23,6 +23,8 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    implementation(project(":domain")) // Likely missing for SearchTracksUseCase
+    implementation(project(":data:repositories"))
     
     // Required to resolve repositories and preferences in SearchViewModel
     implementation(project(":data:repositories"))
