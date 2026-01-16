@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.plexglassplayer.core.ui.components.*
 import com.plexglassplayer.data.auth.PinAuthData
@@ -133,57 +134,67 @@ private fun PinGeneratedContent(
         verticalArrangement = Arrangement.Center,
         modifier = modifier.padding(24.dp)
     ) {
+        Text(
+            text = "Sign in to Plex",
+            style = MaterialTheme.typography.headlineLarge,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
         GlassCard(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                CircularProgressIndicator()
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
-                    text = "Complete sign-in in your browser",
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Your PIN code:",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Enter this PIN at plex.tv/link",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 GlassCard(
-                    modifier = Modifier.padding(horizontal = 32.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
                     Text(
                         text = pinData.pinCode,
-                        style = MaterialTheme.typography.displayLarge,
-                        modifier = Modifier.padding(16.dp)
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            letterSpacing = androidx.compose.ui.unit.sp(8)
+                        ),
+                        modifier = Modifier.padding(24.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Waiting for authorization...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = "Waiting for you to sign in...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 GlassButton(
-                    text = "Open browser again",
+                    text = "Open browser",
                     onClick = onOpenBrowser,
+                    modifier = Modifier.fillMaxWidth(),
                     style = GlassButtonStyle.SECONDARY
                 )
             }
