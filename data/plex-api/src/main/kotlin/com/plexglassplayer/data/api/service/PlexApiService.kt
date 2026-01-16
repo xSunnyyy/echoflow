@@ -10,12 +10,7 @@ import retrofit2.http.Url
 
 interface PlexApiService {
 
-    // ----------------------------
-    // plex.tv endpoints (auth + resources)
-    // ----------------------------
-
-    // NOTE: If you're still using the legacy PIN flow, this can remain GET.
-    // If Plex changes it on you again, you'll swap to clients.plex.tv + POST later.
+    // Auth endpoints (plex.tv)
     @Headers("Accept: application/json")
     @GET("api/v2/pins")
     suspend fun createPin(
@@ -31,10 +26,7 @@ interface PlexApiService {
         @Header("X-Plex-Client-Identifier") clientId: String
     ): PinResponse
 
-    /**
-     * ✅ IMPORTANT: resources is BEST consumed as JSON list
-     * (not MediaContainer XML) so we force JSON + model it correctly.
-     */
+    // ✅ Resources (servers) endpoint — JSON list
     @Headers("Accept: application/json")
     @GET("api/v2/resources")
     suspend fun getResources(
@@ -45,10 +37,7 @@ interface PlexApiService {
         @Query("includeIPv6") includeIPv6: Int = 1
     ): List<DeviceDto>
 
-    // ----------------------------
     // Server endpoints (dynamic base URL)
-    // ----------------------------
-
     @GET
     suspend fun getLibrarySections(
         @Url url: String,
