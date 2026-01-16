@@ -6,13 +6,12 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import com.plexglassplayer.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 
 @AndroidEntryPoint
-class PlaybackService : MediaSessionService() {
+class PlaybackService : androidx.media3.session.MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
@@ -24,19 +23,16 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun initializeSessionAndPlayer() {
-        // Configure audio attributes for music playback
         val audioAttributes = AudioAttributes.Builder()
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        // Create ExoPlayer instance
         player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
-            .setHandleAudioBecomingNoisy(true) // Pause when headphones disconnected
+            .setHandleAudioBecomingNoisy(true)
             .build()
 
-        // Create pending intent for notification tap
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
             0,
@@ -44,7 +40,6 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Create MediaSession
         mediaSession = MediaSession.Builder(this, player!!)
             .setSessionActivity(sessionActivityPendingIntent)
             .build()
@@ -57,7 +52,6 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Stop playback when app is swiped away from recents
         player?.let {
             if (!it.playWhenReady || it.mediaItemCount == 0) {
                 stopSelf()
@@ -67,13 +61,16 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         Timber.d("PlaybackService destroyed")
+
         mediaSession?.run {
-            player.release()
+            // release session first (owns the player reference)
             release()
-            mediaSession = null
         }
+        mediaSession = null
+
         player?.release()
         player = null
+
         super.onDestroy()
     }
 }
