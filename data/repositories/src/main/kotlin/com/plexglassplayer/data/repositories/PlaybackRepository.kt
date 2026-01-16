@@ -64,11 +64,12 @@ class PlaybackRepository @Inject constructor(
         val uri = resolvePlaybackUri(track)
         val isLocal = uri.scheme == "file"
 
-        // Resolves "Java type mismatch" warning by providing non-nullable defaults
+        // Resolves "Java type mismatch" warning by providing non-nullable defaults (empty strings)
+        // for any fields that might be null in the Track model.
         return QueueItem(
             trackId = track.id,
-            title = track.title,
-            artist = track.artistName,
+            title = track.title ?: "Unknown Title",
+            artist = track.artistName ?: "Unknown Artist",
             album = track.albumTitle ?: "", 
             artworkUrl = track.artUrl ?: "", 
             source = if (isLocal) MediaSourceType.LOCAL else MediaSourceType.STREAM,
