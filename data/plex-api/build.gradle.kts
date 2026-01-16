@@ -28,7 +28,6 @@ android {
 dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-network"))
-    implementation(project(":data:plex-auth"))
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.androidx.core.ktx)
