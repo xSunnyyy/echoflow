@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":core:core-util"))
     implementation(project(":core:core-db"))
     implementation(project(":data:repositories"))
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Fixed: Added timber to resolve unresolved reference 'timber' and 'Timber' in ViewModel
     implementation(libs.timber)
