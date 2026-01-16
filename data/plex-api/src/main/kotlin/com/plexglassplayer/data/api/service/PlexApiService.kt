@@ -15,8 +15,7 @@ interface PlexApiService {
     // ----------------------------
 
     /**
-     * ✅ MUST be POST (GET causes HTTP 405)
-     * POST https://plex.tv/api/v2/pins?strong=true
+     * ✅ MUST be POST (GET = HTTP 405)
      */
     @POST("api/v2/pins")
     suspend fun createPin(
@@ -29,9 +28,6 @@ interface PlexApiService {
         @Header("X-Plex-Device-Name") deviceName: String = "PlexGlassPlayer"
     ): PinResponse
 
-    /**
-     * Poll PIN until authToken is populated
-     */
     @GET("api/v2/pins/{pinId}")
     suspend fun checkPin(
         @Path("pinId") pinId: String,
@@ -40,9 +36,6 @@ interface PlexApiService {
         @Header("X-Plex-Version") version: String = "1.0.0"
     ): PinResponse
 
-    /**
-     * Servers/resources associated with the Plex account token
-     */
     @GET("api/v2/resources")
     suspend fun getResources(
         @Header("X-Plex-Token") token: String,
