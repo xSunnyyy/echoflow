@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -39,6 +40,9 @@ fun TrackListScreen(
                 },
                 actions = {
                     if (uiState is TrackListUiState.Success) {
+                        IconButton(onClick = { viewModel.downloadAll() }) {
+                            Icon(Icons.Default.Download, "Download All")
+                        }
                         IconButton(onClick = { viewModel.playAll() }) {
                             Icon(Icons.Default.PlayArrow, "Play All")
                         }
@@ -71,7 +75,8 @@ fun TrackListScreen(
                             TrackItem(
                                 track = track,
                                 trackNumber = index + 1,
-                                onClick = { viewModel.playTrack(track) }
+                                onClick = { viewModel.playTrack(track) },
+                                onDownloadClick = { viewModel.downloadTrack(track) }
                             )
                         }
                     }
@@ -97,8 +102,11 @@ private fun TrackItem(
     track: Track,
     trackNumber: Int,
     onClick: () -> Unit,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
@@ -150,12 +158,30 @@ private fun TrackItem(
             )
 
             // More options
-            IconButton(onClick = { /* TODO: Show options menu */ }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Download") },
+                        onClick = {
+                            onDownloadClick()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Download, "Download")
+                        }
+                    )
+                }
             }
         }
     }

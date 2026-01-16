@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.plexglassplayer.data.auth.AuthRepository
 import com.plexglassplayer.feature.auth.AuthScreen
+import com.plexglassplayer.feature.downloads.DownloadsScreen
 import com.plexglassplayer.feature.home.HomeScreen
 import com.plexglassplayer.feature.library.AlbumListScreen
 import com.plexglassplayer.feature.library.ArtistListScreen
@@ -85,6 +86,9 @@ fun AppNavigation(
                 onSearchClick = {
                     navController.navigate(Screen.Search.route)
                 },
+                onDownloadsClick = {
+                    navController.navigate(Screen.Downloads.route)
+                },
                 onSettingsClick = {
                     // TODO: Navigate to settings
                 }
@@ -139,6 +143,13 @@ fun AppNavigation(
                 playbackManager = playbackManager
             )
         }
+
+        // Downloads
+        composable(Screen.Downloads.route) {
+            DownloadsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
         }
 
         // Mini-player at the bottom
@@ -175,4 +186,5 @@ sealed class Screen(val route: String) {
     }
     data object Search : Screen("search")
     data object NowPlaying : Screen("nowPlaying")
+    data object Downloads : Screen("downloads")
 }

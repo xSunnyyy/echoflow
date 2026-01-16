@@ -46,6 +46,14 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+    // OkHttp
+    implementation(libs.okhttp)
+
     // Timber
     implementation(libs.timber)
 

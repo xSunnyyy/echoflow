@@ -7,6 +7,7 @@ import com.plexglassplayer.core.model.MediaSourceType
 import com.plexglassplayer.core.model.QueueItem
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
+import com.plexglassplayer.data.repositories.DownloadManager
 import com.plexglassplayer.data.repositories.PlaybackRepository
 import com.plexglassplayer.domain.usecase.GetTracksUseCase
 import com.plexglassplayer.feature.playback.PlaybackManager
@@ -23,6 +24,7 @@ class TrackListViewModel @Inject constructor(
     private val getTracksUseCase: GetTracksUseCase,
     private val playbackRepository: PlaybackRepository,
     private val playbackManager: PlaybackManager,
+    private val downloadManager: DownloadManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -87,6 +89,31 @@ class TrackListViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to play all tracks")
+            }
+        }
+    }
+
+    fun downloadTrack(track: Track) {
+        viewModelScope.launch {
+            try {
+                downloadManager.downloadTrack(track)
+                Timber.d("Started download: ${track.title}")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to start download")
+            }
+        }
+    }
+
+    fun downloadAll() {
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                if (state is TrackListUiState.Success) {
+                    downloadManager.downloadTracks(state.tracks)
+                    Timber.d("Started downloading ${state.tracks.size} tracks")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to download all tracks")
             }
         }
     }
