@@ -1,8 +1,8 @@
 package com.plexglassplayer.core.ui.components
 
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.os.Build
-import android.view.RenderEffect
-import android.view.Shader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -25,7 +25,7 @@ import com.plexglassplayer.core.ui.theme.GlassTheme
  *
  * ✅ IMPORTANT:
  * - We DO NOT blur the content (children).
- * - Instead, we blur an EMPTY background layer and draw content above it.
+ * - Instead, we blur an empty background layer and draw content above it.
  *
  * Blur only works on Android 12+, gracefully degrades to translucent on older devices
  */
@@ -40,10 +40,9 @@ fun GlassCard(
     val glassColors = GlassTheme.colors
 
     Box(
-        modifier = modifier
-            .clip(shape)
+        modifier = modifier.clip(shape)
     ) {
-        // ✅ 1) Backdrop blur layer (empty layer — will not blur children)
+        // ✅ 1) Backdrop blur layer (EMPTY layer — will not blur children)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Box(
                 modifier = Modifier
