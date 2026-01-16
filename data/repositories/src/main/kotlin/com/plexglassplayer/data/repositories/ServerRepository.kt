@@ -19,7 +19,7 @@ class ServerRepository @Inject constructor(
     suspend fun getServers(): Result<List<PlexServer>> = suspendRunCatching {
         val token = sessionStore.getAccessToken()
             ?: throw IllegalStateException("No auth token")
-        val clientId = sessionStore.clientId
+        val clientId = sessionStore.getClientId()
 
         // ✅ api/v2/resources returns a JSON array -> List<DeviceDto>
         val devices = apiService.getResources(

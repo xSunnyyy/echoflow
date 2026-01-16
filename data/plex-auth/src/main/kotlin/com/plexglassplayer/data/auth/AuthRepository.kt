@@ -25,7 +25,7 @@ class AuthRepository @Inject constructor(
      * Returns the PIN code and auth URL to open in browser
      */
     suspend fun startPinAuth(): Result<PinAuthData> = suspendRunCatching {
-        val clientId = sessionStore.clientId
+        val clientId = sessionStore.getClientId()
         Timber.d("Starting PIN auth with clientId: $clientId")
 
         val pinResponse = apiService.createPin(
@@ -50,7 +50,7 @@ class AuthRepository @Inject constructor(
      * Call this after opening the browser
      */
     suspend fun pollForAuth(pinId: String, maxAttempts: Int = 60): Result<AuthSession> {
-        val clientId = sessionStore.clientId
+        val clientId = sessionStore.getClientId()
         var attempts = 0
 
         while (attempts < maxAttempts) {

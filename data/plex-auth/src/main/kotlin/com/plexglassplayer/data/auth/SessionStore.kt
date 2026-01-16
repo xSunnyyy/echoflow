@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.plexglassplayer.core.model.AuthSession
 import com.plexglassplayer.core.model.TokenType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
@@ -26,9 +27,17 @@ class SessionStore @Inject constructor(
         private val KEY_CLIENT_ID = stringPreferencesKey("client_id")
     }
 
-    val clientId: String by lazy {
-        // Generate a stable client ID for this installation
-        UUID.randomUUID().toString()
+    suspend fun getClientId(): String {
+        return dataStore.data.map { prefs ->
+            prefs[KEY_CLIENT_ID]
+        }.first() ?: run {
+            // Generate and save a new client ID
+            val newClientId = UUID.randomUUID().toString()
+            dataStore.edit { prefs ->
+                prefs[KEY_CLIENT_ID] = newClientId
+            }
+            newClientId
+        }
     }
 
     val sessionFlow: Flow<AuthSession?> = dataStore.data.map { prefs ->
@@ -60,11 +69,9 @@ class SessionStore @Inject constructor(
     }
 
     suspend fun getAccessToken(): String? {
-        var token: String? = null
-        dataStore.data.collect { prefs ->
-            token = prefs[KEY_ACCESS_TOKEN]
-        }
-        return token
+        return dataStore.data.map { prefs ->
+            prefs[KEY_ACCESS_TOKEN]
+        }.first()
     }
 
     suspend fun clearSession() {
