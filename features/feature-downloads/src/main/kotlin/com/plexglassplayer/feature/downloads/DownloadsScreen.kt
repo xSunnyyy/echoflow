@@ -10,13 +10,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.plexglassplayer.core.model.DownloadEntity //
-import com.plexglassplayer.core.model.DownloadStatus //
+import com.plexglassplayer.core.model.DownloadEntity 
+import com.plexglassplayer.core.model.DownloadStatus 
 import com.plexglassplayer.core.ui.components.AlbumArt
 import com.plexglassplayer.core.ui.components.GlassCard
 
@@ -166,7 +169,7 @@ fun DownloadsScreen(
 
 @Composable
 private fun DownloadItem(
-    download: DownloadEntity, // Fixed from 'Download' to 'DownloadEntity'
+    download: DownloadEntity,
     onCancelClick: (() -> Unit)?,
     onRetryClick: (() -> Unit)?,
     onDeleteClick: (() -> Unit)?,
@@ -206,8 +209,9 @@ private fun DownloadItem(
                 )
 
                 if (download.status == DownloadStatus.DOWNLOADING || download.status == DownloadStatus.QUEUED) {
+                    // Use progress property if defined in core-model, or progressPct / 100f
                     LinearProgressIndicator(
-                        progress = { download.progressPct / 100f },
+                        progress = { (download.progressPct / 100f).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
@@ -217,7 +221,6 @@ private fun DownloadItem(
                     )
                 }
 
-                // Fixed: Captured property in local variable to allow for smart-casting
                 val currentError = download.errorMessage
                 if (download.status == DownloadStatus.FAILED && currentError != null) {
                     Text(
