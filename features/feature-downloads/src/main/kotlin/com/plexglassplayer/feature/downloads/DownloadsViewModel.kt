@@ -90,6 +90,5 @@ sealed class DownloadsUiState {
         val completedDownloads: List<DownloadEntity>,
         val failedDownloads: List<DownloadEntity>
     ) : DownloadsUiState()
-    // Added Error state to resolve "Unresolved reference 'Error'" in DownloadsScreen.kt
     data class Error(val message: String) : DownloadsUiState()
 }
