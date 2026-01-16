@@ -23,6 +23,8 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    implementation(libs.timber) // Add this
+    implementation(libs.androidx.compose.material.icons.extended)
     
     // Required to resolve PlaybackRepository and DownloadManager
     implementation(project(":data:repositories"))
