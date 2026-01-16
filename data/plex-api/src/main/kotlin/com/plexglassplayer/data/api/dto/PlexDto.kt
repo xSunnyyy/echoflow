@@ -12,31 +12,27 @@ data class PinResponse(
     @SerialName("authToken") val authToken: String? = null
 )
 
+// ----------------------------
 // Plex resources (servers) DTOs
-@Serializable
-data class ResourcesResponse(
-    @SerialName("MediaContainer") val container: ResourcesContainer
-)
-
-@Serializable
-data class ResourcesContainer(
-    @SerialName("Device") val devices: List<DeviceDto>
-)
+// ✅ JSON LIST (api/v2/resources returns a JSON array)
+// ----------------------------
 
 @Serializable
 data class DeviceDto(
     @SerialName("clientIdentifier") val clientIdentifier: String,
-    val name: String,
-    val owned: Boolean = false,
-    @SerialName("Connection") val connections: List<ConnectionDto> = emptyList()
+    @SerialName("name") val name: String,
+    @SerialName("owned") val owned: Boolean = false,
+
+    // ✅ JSON uses "connections" (lowercase), not "Connection"
+    @SerialName("connections") val connections: List<ConnectionDto> = emptyList()
 )
 
 @Serializable
 data class ConnectionDto(
-    val uri: String,
-    val local: Boolean = false,
+    @SerialName("uri") val uri: String,
+    @SerialName("local") val local: Boolean = false,
     @SerialName("protocol") val protocol: String = "http",
-    val relay: Boolean = false
+    @SerialName("relay") val relay: Boolean = false
 )
 
 fun DeviceDto.toModel(): PlexServer {
@@ -58,7 +54,9 @@ fun ConnectionDto.toModel(): ServerConnection {
     )
 }
 
+// ----------------------------
 // Library DTOs
+// ----------------------------
 @Serializable
 data class LibrarySectionsResponse(
     @SerialName("MediaContainer") val container: LibrarySectionsContainer
@@ -76,7 +74,9 @@ data class LibrarySectionDto(
     val type: String // "artist", "movie", "show", etc.
 )
 
+// ----------------------------
 // Artist DTOs
+// ----------------------------
 @Serializable
 data class ArtistsResponse(
     @SerialName("MediaContainer") val container: ArtistsContainer
@@ -105,7 +105,9 @@ fun ArtistDto.toModel(): Artist {
     )
 }
 
+// ----------------------------
 // Album DTOs
+// ----------------------------
 @Serializable
 data class AlbumsResponse(
     @SerialName("MediaContainer") val container: AlbumsContainer
@@ -136,7 +138,9 @@ fun AlbumDto.toModel(): Album {
     )
 }
 
+// ----------------------------
 // Track DTOs
+// ----------------------------
 @Serializable
 data class TracksResponse(
     @SerialName("MediaContainer") val container: TracksContainer
@@ -173,7 +177,9 @@ fun TrackDto.toModel(): Track {
     )
 }
 
+// ----------------------------
 // Playlist DTOs
+// ----------------------------
 @Serializable
 data class PlaylistsResponse(
     @SerialName("MediaContainer") val container: PlaylistsContainer
