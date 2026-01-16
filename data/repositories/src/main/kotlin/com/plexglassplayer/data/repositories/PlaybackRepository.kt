@@ -64,12 +64,12 @@ class PlaybackRepository @Inject constructor(
         val uri = resolvePlaybackUri(track)
         val isLocal = uri.scheme == "file"
 
-        // Fixes the "Java type mismatch" by providing empty strings for nullable fields
+        // Resolves "Java type mismatch" warning by providing non-nullable defaults
         return QueueItem(
             trackId = track.id,
             title = track.title,
             artist = track.artistName,
-            album = track.albumTitle ?: "",
+            album = track.albumTitle ?: "", 
             artworkUrl = track.artUrl ?: "", 
             source = if (isLocal) MediaSourceType.LOCAL else MediaSourceType.STREAM,
             uri = uri.toString()
@@ -78,7 +78,7 @@ class PlaybackRepository @Inject constructor(
 
     /**
      * Convert multiple tracks to queue items
-     * Renamed to convertTracksToQueue to match TrackListViewModel's expectation
+     * Matches TrackListViewModel's expectation
      */
     suspend fun convertTracksToQueue(tracks: List<Track>): List<QueueItem> {
         return tracks.map { trackToQueueItem(it) }
