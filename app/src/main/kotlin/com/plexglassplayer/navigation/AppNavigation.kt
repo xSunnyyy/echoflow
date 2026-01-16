@@ -100,6 +100,9 @@ fun AppNavigation(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNowPlayingClick = {
+                    navController.navigate(Screen.NowPlaying.route)
                 }
             )
         }
@@ -158,7 +161,10 @@ fun AppNavigation(
         composable(Screen.Queue.route) {
             com.plexglassplayer.feature.playback.QueueScreen(
                 playbackManager = playbackManager,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNowPlayingClick = {
+                    navController.navigate(Screen.NowPlaying.route)
+                }
             )
         }
 
