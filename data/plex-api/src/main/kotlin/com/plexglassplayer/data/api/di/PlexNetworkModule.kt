@@ -7,6 +7,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -35,20 +36,34 @@ object PlexNetworkModule {
         }
     }
 
+    /**
+     * Forces Plex to respond with JSON when possible.
+     * This matters a LOT because your DTOs expect JSON.
+     */
+    @Provides
+    @Singleton
+    fun provideAcceptJsonInterceptor(): Interceptor {
+        return Interceptor { chain ->
+            val req = chain.request().newBuilder()
+                .header("Accept", "application/json")
+                .header("X-Plex-Accept", "application/json")
+                .build()
+            chain.proceed(req)
+        }
+    }
+
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        logging: HttpLoggingInterceptor
+        logging: HttpLoggingInterceptor,
+        acceptJson: Interceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(acceptJson)
             .addInterceptor(logging)
             .build()
     }
 
-    /**
-     * Plex.tv endpoints ONLY (auth + resources)
-     * MUST be https://plex.tv/
-     */
     @Provides
     @Singleton
     fun providePlexRetrofit(
@@ -56,7 +71,6 @@ object PlexNetworkModule {
         json: Json
     ): Retrofit {
         val contentType = "application/json".toMediaType()
-
         return Retrofit.Builder()
             .baseUrl(PLEX_BASE_URL)
             .client(client)
