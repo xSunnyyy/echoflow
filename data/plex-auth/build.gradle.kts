@@ -28,6 +28,7 @@ android {
 dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
+    implementation(project(":data:plex-api"))
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.androidx.core.ktx)
