@@ -29,7 +29,7 @@ class SearchViewModel @Inject constructor(
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     init {
-        // Debounce search queries
+        // Debounce search queries to avoid API spamming
         _searchQuery
             .debounce(300)
             .distinctUntilChanged()
@@ -67,7 +67,7 @@ class SearchViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Search failed")
+                    Timber.e(result.exception, "Search failed for query: $query")
                     _uiState.value = SearchUiState.Error(
                         result.exception.message ?: "Search failed"
                     )
@@ -82,13 +82,17 @@ class SearchViewModel @Inject constructor(
             try {
                 val state = _uiState.value
                 if (state is SearchUiState.Success) {
+                    // Uses the convertTracksToQueue method we updated in the Repository
                     val queueItems = playbackRepository.convertTracksToQueue(state.results)
                     val startIndex = state.results.indexOfFirst { it.id == track.id }
-                    playbackManager.playTracks(queueItems, startIndex)
-                    Timber.d("Started playback: ${track.title}")
+                    
+                    // Call playbackManager to play the specific track within the search results context
+                    playbackManager.playTracks(queueItems, if (startIndex != -1) startIndex else 0)
+                    
+                    Timber.d("Started playback from search: ${track.title}")
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to start playback")
+                Timber.e(e, "Failed to start playback from search results")
             }
         }
     }
