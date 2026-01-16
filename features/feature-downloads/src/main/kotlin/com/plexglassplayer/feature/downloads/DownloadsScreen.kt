@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-// Ensure these point to the actual models in your core module
-import com.plexglassplayer.core.model.Download 
+// Import the correct model and status from core
+import com.plexglassplayer.core.model.Download
 import com.plexglassplayer.core.model.DownloadStatus
 import com.plexglassplayer.core.ui.components.AlbumArt
 import com.plexglassplayer.core.ui.components.GlassCard
@@ -89,7 +89,6 @@ fun DownloadsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Active downloads
                     if (state.activeDownloads.isNotEmpty()) {
                         item {
                             Text(
@@ -106,11 +105,9 @@ fun DownloadsScreen(
                                 onDeleteClick = null
                             )
                         }
-
                         item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
 
-                    // Failed downloads
                     if (state.failedDownloads.isNotEmpty()) {
                         item {
                             Text(
@@ -127,11 +124,9 @@ fun DownloadsScreen(
                                 onDeleteClick = { viewModel.deleteDownload(download.id) }
                             )
                         }
-
                         item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
 
-                    // Completed downloads
                     if (state.completedDownloads.isNotEmpty()) {
                         item {
                             Text(
@@ -151,15 +146,19 @@ fun DownloadsScreen(
                     }
                 }
             }
-            // Fix: Capture errorMessage to local variable to allow smart casting
+
             is DownloadsUiState.Error -> {
-                val errorMsg = state.errorMessage
+                // Fix: Capture error message to local variable for smart casting
+                val message = state.errorMessage
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = errorMsg ?: "Unknown error",
+                        text = message ?: "Failed to load downloads",
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -170,7 +169,7 @@ fun DownloadsScreen(
 
 @Composable
 private fun DownloadItem(
-    download: Download, // Changed from DownloadEntity to match core model
+    download: Download, // Replaced DownloadEntity with correct model
     onCancelClick: (() -> Unit)?,
     onRetryClick: (() -> Unit)?,
     onDeleteClick: (() -> Unit)?,
@@ -184,14 +183,12 @@ private fun DownloadItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Album art
             AlbumArt(
                 artUrl = download.artworkUrl,
                 size = 56.dp,
                 cornerRadius = 4.dp
             )
 
-            // Track info and progress
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -211,7 +208,6 @@ private fun DownloadItem(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Progress indicator for active downloads
                 if (download.status == DownloadStatus.DOWNLOADING || download.status == DownloadStatus.QUEUED) {
                     LinearProgressIndicator(
                         progress = { download.progressPct / 100f },
@@ -224,7 +220,7 @@ private fun DownloadItem(
                     )
                 }
 
-                // Error message for failed downloads - Fix: Use local variable for smart cast
+                // Fix: Use local variable for item-level errorMessage smart cast
                 val itemError = download.errorMessage
                 if (download.status == DownloadStatus.FAILED && itemError != null) {
                     Text(
@@ -237,10 +233,7 @@ private fun DownloadItem(
                 }
             }
 
-            // Action buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 onCancelClick?.let {
                     IconButton(onClick = it) {
                         Icon(Icons.Default.Close, "Cancel")
