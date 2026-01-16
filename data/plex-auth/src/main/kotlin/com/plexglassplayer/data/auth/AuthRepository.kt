@@ -21,7 +21,7 @@ class AuthRepository @Inject constructor(
     val sessionFlow: Flow<AuthSession?> = sessionStore.sessionFlow
 
     /**
-     * Start PIN-based OAuth flow
+     * Start PIN-based auth flow
      * Returns the PIN code and auth URL to open in browser
      */
     suspend fun startPinAuth(): Result<PinAuthData> = suspendRunCatching {
@@ -34,7 +34,9 @@ class AuthRepository @Inject constructor(
             version = "1.0"
         )
 
-        val authUrl = buildAuthUrl(pinResponse.code, clientId)
+        // ✅ Correct Plex PIN entry page:
+        // User logs in and enters the PIN code here.
+        val authUrl = buildAuthUrl()
 
         PinAuthData(
             pinId = pinResponse.id,
@@ -74,11 +76,15 @@ class AuthRepository @Inject constructor(
 
                         sessionStore.saveSession(session)
                         return Result.Success(session)
+                    } else {
+                        Timber.d("PIN not yet authorized (attempt ${attempts + 1}/$maxAttempts)")
                     }
                 }
+
                 is Result.Error -> {
                     Timber.w("Error checking PIN: ${result.exception.message}")
                 }
+
                 else -> {}
             }
 
@@ -90,17 +96,17 @@ class AuthRepository @Inject constructor(
 
     /**
      * Handle OAuth callback from deep link
+     * (Not used for the PIN flow; kept for future)
      */
     suspend fun handleOAuthCallback(uri: Uri): Result<AuthSession> = suspendRunCatching {
         Timber.d("Handling OAuth callback: $uri")
 
-        // Extract token from URI if using direct callback
         val token = uri.getQueryParameter("token")
             ?: uri.getQueryParameter("authToken")
             ?: throw IllegalArgumentException("No token in callback URI")
 
         val session = AuthSession(
-            userId = "user", // Placeholder, fetch actual user ID later
+            userId = "user",
             accessToken = token,
             tokenType = TokenType.LEGACY,
             expiresAtEpochMs = null,
@@ -115,15 +121,11 @@ class AuthRepository @Inject constructor(
         sessionStore.clearSession()
     }
 
-    private fun buildAuthUrl(pinCode: String, clientId: String): String {
-        return Uri.parse("https://app.plex.tv/auth#")
-            .buildUpon()
-            .appendQueryParameter("clientID", clientId)
-            .appendQueryParameter("code", pinCode)
-            .appendQueryParameter("context[device][product]", "PlexGlassPlayer")
-            .build()
-            .toString()
-    }
+    /**
+     * ✅ Plex PIN entry page
+     * The user must enter the PIN code here after logging in.
+     */
+    private fun buildAuthUrl(): String = "https://plex.tv/link"
 }
 
 data class PinAuthData(
