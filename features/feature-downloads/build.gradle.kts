@@ -24,9 +24,9 @@ dependencies {
     implementation(project(":core:core-util"))
     implementation(project(":core:core-db"))
     implementation(project(":data:repositories"))
-    
-    // Required to resolve DownloadManager and other repositories
-    implementation(project(":data:repositories"))
+
+    // Fixed: Added timber to resolve unresolved reference 'timber' and 'Timber' in ViewModel
+    implementation(libs.timber)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
