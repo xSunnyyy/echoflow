@@ -52,8 +52,10 @@ class PlaybackRepository @Inject constructor(
         val token = sessionStore.getAccessToken()
             ?: throw IllegalStateException("No auth token")
 
+        val streamKey = requireStreamKey(track)
+
         // Build Plex streaming URL
-        return Uri.parse("$baseUrl${track.streamKey}")
+        return Uri.parse("$baseUrl$streamKey")
             .buildUpon()
             .appendQueryParameter("X-Plex-Token", token)
             .build()
@@ -96,5 +98,16 @@ class PlaybackRepository @Inject constructor(
             throw IllegalArgumentException("Track.id is null/blank; cannot resolve playback or queue item.")
         }
         return id
+    }
+
+    /**
+     * Ensures we never build a streaming URL from a nullable streamKey.
+     */
+    private fun requireStreamKey(track: Track): String {
+        val key = track.streamKey
+        if (key.isNullOrBlank()) {
+            throw IllegalArgumentException("Track.streamKey is null/blank; cannot build streaming URL.")
+        }
+        return key
     }
 }
