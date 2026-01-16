@@ -3,8 +3,8 @@ package com.plexglassplayer.data.api.service
 import com.plexglassplayer.data.api.dto.*
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.Path
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
 
@@ -15,35 +15,34 @@ interface PlexApiService {
     // ----------------------------
 
     /**
-     * ✅ MUST be POST (GET = HTTP 405)
+     * ✅ MUST be POST — Plex returns 405 if you use GET.
+     * Endpoint: https://plex.tv/api/v2/pins
      */
     @POST("api/v2/pins")
     suspend fun createPin(
-        @Query("strong") strong: Boolean = true,
         @Header("X-Plex-Client-Identifier") clientId: String,
         @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
-        @Header("X-Plex-Version") version: String = "1.0.0",
-        @Header("X-Plex-Platform") platform: String = "Android",
-        @Header("X-Plex-Device") device: String = "Android",
-        @Header("X-Plex-Device-Name") deviceName: String = "PlexGlassPlayer"
+        @Header("X-Plex-Version") version: String = "1.0"
     ): PinResponse
 
+    /**
+     * Poll pin for authToken
+     */
     @GET("api/v2/pins/{pinId}")
     suspend fun checkPin(
         @Path("pinId") pinId: String,
-        @Header("X-Plex-Client-Identifier") clientId: String,
-        @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
-        @Header("X-Plex-Version") version: String = "1.0.0"
+        @Header("X-Plex-Client-Identifier") clientId: String
     ): PinResponse
+
+    // ----------------------------
+    // Resources (servers) endpoint
+    // ----------------------------
 
     @GET("api/v2/resources")
     suspend fun getResources(
         @Header("X-Plex-Token") token: String,
-        @Header("X-Plex-Client-Identifier") clientId: String,
-        @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
-        @Header("X-Plex-Version") version: String = "1.0.0"
+        @Header("X-Plex-Client-Identifier") clientId: String
     ): ResourcesResponse
-
 
     // ----------------------------
     // Server endpoints (dynamic base URL)
