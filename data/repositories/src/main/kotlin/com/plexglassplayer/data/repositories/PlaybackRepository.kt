@@ -25,7 +25,6 @@ class PlaybackRepository @Inject constructor(
     suspend fun resolvePlaybackUri(track: Track): Uri {
         val trackId = requireTrackId(track)
 
-        // Check if track is downloaded
         val serverUrl = serverPreferences.getActiveServerUrl() ?: ""
         val download = downloadDao.findCompletedDownload(serverUrl, trackId)
 
@@ -54,7 +53,6 @@ class PlaybackRepository @Inject constructor(
 
         val streamKey = requireStreamKey(track)
 
-        // Build Plex streaming URL
         return Uri.parse("$baseUrl$streamKey")
             .buildUpon()
             .appendQueryParameter("X-Plex-Token", token)
@@ -89,9 +87,6 @@ class PlaybackRepository @Inject constructor(
         return tracks.map { trackToQueueItem(it) }
     }
 
-    /**
-     * Ensures we never pass a nullable track id into DAO / QueueItem.
-     */
     private fun requireTrackId(track: Track): String {
         val id = track.id
         if (id.isNullOrBlank()) {
@@ -100,9 +95,6 @@ class PlaybackRepository @Inject constructor(
         return id
     }
 
-    /**
-     * Ensures we never build a streaming URL from a nullable streamKey.
-     */
     private fun requireStreamKey(track: Track): String {
         val key = track.streamKey
         if (key.isNullOrBlank()) {
