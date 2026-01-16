@@ -23,6 +23,8 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    implementation(libs.timber)
+    implementation(libs.androidx.compose.material.icons.extended)
     
     // Required to resolve ServerRepository and ServerPreferences in ServerSelectionViewModel
     implementation(project(":data:repositories"))
