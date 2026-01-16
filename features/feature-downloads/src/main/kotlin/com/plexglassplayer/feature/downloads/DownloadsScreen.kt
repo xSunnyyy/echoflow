@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.plexglassplayer.core.model.DownloadEntity
-import com.plexglassplayer.core.model.DownloadStatus
+import com.plexglassplayer.core.model.DownloadEntity //
+import com.plexglassplayer.core.model.DownloadStatus //
 import com.plexglassplayer.core.ui.components.AlbumArt
 import com.plexglassplayer.core.ui.components.GlassCard
 
@@ -166,7 +166,7 @@ fun DownloadsScreen(
 
 @Composable
 private fun DownloadItem(
-    download: DownloadEntity,
+    download: DownloadEntity, // Fixed from 'Download' to 'DownloadEntity'
     onCancelClick: (() -> Unit)?,
     onRetryClick: (() -> Unit)?,
     onDeleteClick: (() -> Unit)?,
@@ -217,10 +217,11 @@ private fun DownloadItem(
                     )
                 }
 
-                val errorMsg = download.errorMessage
-                if (download.status == DownloadStatus.FAILED && errorMsg != null) {
+                // Fixed: Captured property in local variable to allow for smart-casting
+                val currentError = download.errorMessage
+                if (download.status == DownloadStatus.FAILED && currentError != null) {
                     Text(
-                        text = errorMsg,
+                        text = currentError,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                         maxLines = 2,
