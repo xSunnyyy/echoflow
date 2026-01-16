@@ -23,11 +23,13 @@ class PlaybackRepository @Inject constructor(
      * Prefers local file if downloaded, otherwise builds streaming URL
      */
     suspend fun resolvePlaybackUri(track: Track): Uri {
+        val trackId = requireTrackId(track)
+
         // Check if track is downloaded
         val serverUrl = serverPreferences.getActiveServerUrl() ?: ""
-        val download = downloadDao.findCompletedDownload(serverUrl, track.id)
+        val download = downloadDao.findCompletedDownload(serverUrl, trackId)
 
-        return if (download != null && download.filePath != null) {
+        return if (download?.filePath != null) {
             val file = File(download.filePath)
             if (file.exists()) {
                 Timber.d("Playing local file: ${download.filePath}")
@@ -61,17 +63,17 @@ class PlaybackRepository @Inject constructor(
      * Convert track to queue item
      */
     suspend fun trackToQueueItem(track: Track): QueueItem {
+        val trackId = requireTrackId(track)
+
         val uri = resolvePlaybackUri(track)
         val isLocal = uri.scheme == "file"
 
-        // Resolves "Java type mismatch" warning by providing non-nullable defaults (empty strings)
-        // for any fields that might be null in the Track model.
         return QueueItem(
-            trackId = track.id,
+            trackId = trackId,
             title = track.title ?: "Unknown Title",
             artist = track.artistName ?: "Unknown Artist",
-            album = track.albumTitle ?: "", 
-            artworkUrl = track.artUrl ?: "", 
+            album = track.albumTitle ?: "",
+            artworkUrl = track.artUrl ?: "",
             source = if (isLocal) MediaSourceType.LOCAL else MediaSourceType.STREAM,
             uri = uri.toString()
         )
@@ -83,5 +85,18 @@ class PlaybackRepository @Inject constructor(
      */
     suspend fun convertTracksToQueue(tracks: List<Track>): List<QueueItem> {
         return tracks.map { trackToQueueItem(it) }
+    }
+
+    /**
+     * Ensures we never pass a nullable track id into DAO / QueueItem.
+     * If Track.id is nullable in your model, this prevents the Java type mismatch compile error.
+     */
+    private fun requireTrackId(track: Track): String {
+        val id = track.id
+        if (id.isNullOrBlank()) {
+            // Keep behavior explicit: without a real id, downloads + queue identity can't function.
+            throw IllegalArgumentException("Track.id is null/blank; cannot resolve playback or queue item.")
+        }
+        return id
     }
 }
