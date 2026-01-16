@@ -52,9 +52,13 @@ fun AppNavigation(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        // Calculate bottom padding for mini-player (48dp art + 16dp padding + 2dp progress = ~70dp)
+        val miniPlayerHeight = if (!hideMiniPlayer && playbackManager.currentTrack.collectAsState().value != null) 70.dp else 0.dp
+
         NavHost(
             navController = navController,
-            startDestination = startDestination
+            startDestination = startDestination,
+            modifier = Modifier.padding(bottom = miniPlayerHeight)
         ) {
         // Auth flow
         composable(Screen.Auth.route) {

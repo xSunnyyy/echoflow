@@ -45,6 +45,12 @@ class PlaybackManager @Inject constructor(
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
+    private val _shuffleEnabled = MutableStateFlow(false)
+    val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
+    val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+
     init {
         initializeController()
     }
@@ -159,6 +165,7 @@ class PlaybackManager @Inject constructor(
     }
 
     fun setRepeatMode(repeatMode: RepeatMode) {
+        _repeatMode.value = repeatMode
         val playerRepeatMode = when (repeatMode) {
             RepeatMode.OFF -> Player.REPEAT_MODE_OFF
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
@@ -167,8 +174,22 @@ class PlaybackManager @Inject constructor(
         mediaController?.repeatMode = playerRepeatMode
     }
 
+    fun toggleRepeatMode() {
+        val newMode = when (_repeatMode.value) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+        setRepeatMode(newMode)
+    }
+
     fun setShuffle(enabled: Boolean) {
+        _shuffleEnabled.value = enabled
         mediaController?.shuffleModeEnabled = enabled
+    }
+
+    fun toggleShuffle() {
+        setShuffle(!_shuffleEnabled.value)
     }
 
     fun getCurrentPosition(): Long {

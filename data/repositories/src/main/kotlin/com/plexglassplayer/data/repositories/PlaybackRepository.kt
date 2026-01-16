@@ -89,15 +89,38 @@ class PlaybackRepository @Inject constructor(
         val uri = resolvePlaybackUri(track)
         val isLocal = uri.scheme == "file"
 
+        // Build full artwork URL with server base URL and token
+        val artworkUrl = buildArtworkUrl(track.artUrl)
+
         return QueueItem(
             trackId = trackId,
             title = track.title ?: "Unknown Title",
             artist = track.artistName ?: "Unknown Artist",
             album = track.albumTitle ?: "",
-            artworkUrl = track.artUrl ?: "",
+            artworkUrl = artworkUrl,
             source = if (isLocal) MediaSourceType.LOCAL else MediaSourceType.STREAM,
             uri = uri.toString()
         )
+    }
+
+    /**
+     * Build full artwork URL from Plex partial path
+     */
+    private suspend fun buildArtworkUrl(artPath: String?): String? {
+        if (artPath.isNullOrBlank()) return null
+
+        val baseUrl = serverPreferences.getActiveServerUrl() ?: return null
+        val token = sessionStore.getAccessToken() ?: return null
+
+        // If it's already a full URL, return it
+        if (artPath.startsWith("http")) return artPath
+
+        // Otherwise, build full URL with server base and auth token
+        return Uri.parse("$baseUrl$artPath")
+            .buildUpon()
+            .appendQueryParameter("X-Plex-Token", token)
+            .build()
+            .toString()
     }
 
     /**
