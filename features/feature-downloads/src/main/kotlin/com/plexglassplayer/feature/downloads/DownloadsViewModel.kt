@@ -27,18 +27,23 @@ class DownloadsViewModel @Inject constructor(
 
     private fun loadDownloads() {
         viewModelScope.launch {
-            downloadManager.getAllDownloads().collect { downloads ->
-                if (downloads.isEmpty()) {
-                    _uiState.value = DownloadsUiState.Empty
-                } else {
-                    _uiState.value = DownloadsUiState.Success(
-                        activeDownloads = downloads.filter {
-                            it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
-                        },
-                        completedDownloads = downloads.filter { it.status == DownloadStatus.COMPLETED },
-                        failedDownloads = downloads.filter { it.status == DownloadStatus.FAILED }
-                    )
+            try {
+                downloadManager.getAllDownloads().collect { downloads ->
+                    if (downloads.isEmpty()) {
+                        _uiState.value = DownloadsUiState.Empty
+                    } else {
+                        _uiState.value = DownloadsUiState.Success(
+                            activeDownloads = downloads.filter {
+                                it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
+                            },
+                            completedDownloads = downloads.filter { it.status == DownloadStatus.COMPLETED },
+                            failedDownloads = downloads.filter { it.status == DownloadStatus.FAILED }
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load downloads")
+                _uiState.value = DownloadsUiState.Error("Failed to load downloads")
             }
         }
     }
@@ -85,4 +90,6 @@ sealed class DownloadsUiState {
         val completedDownloads: List<DownloadEntity>,
         val failedDownloads: List<DownloadEntity>
     ) : DownloadsUiState()
+    // Added Error state to resolve "Unresolved reference 'Error'" in DownloadsScreen.kt
+    data class Error(val message: String) : DownloadsUiState()
 }
