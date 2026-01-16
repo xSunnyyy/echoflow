@@ -89,12 +89,10 @@ class PlaybackRepository @Inject constructor(
 
     /**
      * Ensures we never pass a nullable track id into DAO / QueueItem.
-     * If Track.id is nullable in your model, this prevents the Java type mismatch compile error.
      */
     private fun requireTrackId(track: Track): String {
         val id = track.id
         if (id.isNullOrBlank()) {
-            // Keep behavior explicit: without a real id, downloads + queue identity can't function.
             throw IllegalArgumentException("Track.id is null/blank; cannot resolve playback or queue item.")
         }
         return id
