@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
+import com.plexglassplayer.data.repositories.PlaybackRepository
 import com.plexglassplayer.domain.usecase.SearchTracksUseCase
+import com.plexglassplayer.feature.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -15,7 +17,9 @@ import javax.inject.Inject
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val searchTracksUseCase: SearchTracksUseCase
+    private val searchTracksUseCase: SearchTracksUseCase,
+    private val playbackRepository: PlaybackRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -74,8 +78,19 @@ class SearchViewModel @Inject constructor(
     }
 
     fun playTrack(track: Track) {
-        Timber.d("Play track: ${track.title}")
-        // TODO: Integrate with PlaybackService
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                if (state is SearchUiState.Success) {
+                    val queueItems = playbackRepository.convertTracksToQueue(state.results)
+                    val startIndex = state.results.indexOfFirst { it.id == track.id }
+                    playbackManager.playTracks(queueItems, startIndex)
+                    Timber.d("Started playback: ${track.title}")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to start playback")
+            }
+        }
     }
 }
 

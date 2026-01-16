@@ -3,9 +3,13 @@ package com.plexglassplayer.feature.library
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plexglassplayer.core.model.MediaSourceType
+import com.plexglassplayer.core.model.QueueItem
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
+import com.plexglassplayer.data.repositories.PlaybackRepository
 import com.plexglassplayer.domain.usecase.GetTracksUseCase
+import com.plexglassplayer.feature.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class TrackListViewModel @Inject constructor(
     private val getTracksUseCase: GetTracksUseCase,
+    private val playbackRepository: PlaybackRepository,
+    private val playbackManager: PlaybackManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -55,15 +61,33 @@ class TrackListViewModel @Inject constructor(
     }
 
     fun playTrack(track: Track) {
-        Timber.d("Play track: ${track.title}")
-        // TODO: Integrate with PlaybackService
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                if (state is TrackListUiState.Success) {
+                    val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
+                    val startIndex = state.tracks.indexOfFirst { it.id == track.id }
+                    playbackManager.playTracks(queueItems, startIndex)
+                    Timber.d("Started playback: ${track.title}")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to start playback")
+            }
+        }
     }
 
     fun playAll() {
-        val state = _uiState.value
-        if (state is TrackListUiState.Success) {
-            Timber.d("Play all ${state.tracks.size} tracks")
-            // TODO: Add all tracks to queue and start playback
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                if (state is TrackListUiState.Success) {
+                    val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
+                    playbackManager.playTracks(queueItems, 0)
+                    Timber.d("Playing all ${state.tracks.size} tracks")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to play all tracks")
+            }
         }
     }
 }
