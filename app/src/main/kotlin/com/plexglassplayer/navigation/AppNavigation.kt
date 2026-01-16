@@ -42,10 +42,12 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Hide mini-player on certain screens
+    // Hide mini-player on certain screens (Home and Queue have their own now playing bars)
     val hideMiniPlayer = currentRoute == Screen.NowPlaying.route
         || currentRoute == Screen.Auth.route
         || currentRoute == Screen.ServerSelection.route
+        || currentRoute == Screen.Home.route
+        || currentRoute == Screen.Queue.route
 
     // Determine start destination based on auth state
     val startDestination = when {
