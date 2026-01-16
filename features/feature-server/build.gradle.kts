@@ -23,6 +23,10 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    
+    // Required to resolve ServerRepository and ServerPreferences in ServerSelectionViewModel
+    implementation(project(":data:repositories"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
