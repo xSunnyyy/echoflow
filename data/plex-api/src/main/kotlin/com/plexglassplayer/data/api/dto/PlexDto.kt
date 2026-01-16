@@ -161,10 +161,26 @@ data class TrackDto(
     @SerialName("parentTitle") val parentTitle: String? = null, // Album
     val duration: Long? = null,
     val index: Int? = null,
-    val thumb: String? = null
+    val thumb: String? = null,
+    @SerialName("Media") val media: List<MediaDto>? = null
+)
+
+@Serializable
+data class MediaDto(
+    @SerialName("Part") val parts: List<PartDto>? = null
+)
+
+@Serializable
+data class PartDto(
+    val key: String? = null,
+    val file: String? = null
 )
 
 fun TrackDto.toModel(): Track {
+    // Try to get the actual media file path from Media->Part->key
+    // This is the direct playable path, not the metadata path
+    val mediaKey = media?.firstOrNull()?.parts?.firstOrNull()?.key
+
     return Track(
         id = ratingKey,
         title = title,
@@ -173,7 +189,8 @@ fun TrackDto.toModel(): Track {
         durationMs = duration ?: 0L,
         trackNumber = index,
         artUrl = thumb,
-        streamKey = key
+        // Use media part key if available, fallback to metadata key
+        streamKey = mediaKey ?: key
     )
 }
 

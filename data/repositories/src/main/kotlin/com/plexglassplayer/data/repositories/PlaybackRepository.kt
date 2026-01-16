@@ -44,7 +44,7 @@ class PlaybackRepository @Inject constructor(
 
     /**
      * Build streaming URL for a track
-     * Uses Plex universal music transcoder for compatibility
+     * Prefers direct play, falls back to universal transcoder
      */
     private suspend fun buildStreamingUri(track: Track): Uri {
         val baseUrl = serverPreferences.getActiveServerUrl()
@@ -54,16 +54,27 @@ class PlaybackRepository @Inject constructor(
 
         val streamKey = requireStreamKey(track)
 
-        // Use Plex universal music transcoder for reliable streaming
-        // Format: /music/:/transcode/universal/start.mp3?path={key}&protocol=http
-        val streamingUrl = Uri.parse("$baseUrl/music/:/transcode/universal/start.mp3")
-            .buildUpon()
-            .appendQueryParameter("path", streamKey)
-            .appendQueryParameter("protocol", "http")
-            .appendQueryParameter("audioCodec", "mp3")
-            .appendQueryParameter("audioBitrate", "320")
-            .appendQueryParameter("X-Plex-Token", token)
-            .build()
+        // If streamKey is a Part key (starts with /library/parts/), use direct play
+        // Otherwise use the universal transcoder
+        val streamingUrl = if (streamKey.startsWith("/library/parts/")) {
+            // Direct play - just append the part key to base URL
+            Timber.d("Using direct play for: $streamKey")
+            Uri.parse("$baseUrl$streamKey")
+                .buildUpon()
+                .appendQueryParameter("X-Plex-Token", token)
+                .build()
+        } else {
+            // Universal transcoder for metadata keys
+            Timber.d("Using transcoder for: $streamKey")
+            Uri.parse("$baseUrl/music/:/transcode/universal/start.mp3")
+                .buildUpon()
+                .appendQueryParameter("path", streamKey)
+                .appendQueryParameter("protocol", "http")
+                .appendQueryParameter("audioCodec", "mp3")
+                .appendQueryParameter("audioBitrate", "320")
+                .appendQueryParameter("X-Plex-Token", token)
+                .build()
+        }
 
         Timber.d("Built streaming URL: $streamingUrl")
         return streamingUrl
