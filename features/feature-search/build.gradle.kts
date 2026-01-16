@@ -24,10 +24,14 @@ dependencies {
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
     implementation(project(":domain")) // Likely missing for SearchTracksUseCase
-    implementation(project(":data:repositories"))
-    
-    // Required to resolve repositories and preferences in SearchViewModel
-    implementation(project(":data:repositories"))
+    implementation(project(":core:core-ui"))
+    implementation(project(":core:core-model"))
+    implementation(project(":core:core-util"))
+    implementation(project(":domain")) // Required for SearchTracksUseCase
+    implementation(project(":data:repositories")) // Required for PlaybackRepository
+
+    // Add logging
+    implementation(libs.timber)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
