@@ -3,7 +3,7 @@ package com.plexglassplayer.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.plexglassplayer.data.auth.AuthRepository
-import com.plexglassplayer.data.cache.ServerPreferences
+import com.plexglassplayer.data.repositories.ServerPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
