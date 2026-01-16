@@ -3,8 +3,6 @@ package com.plexglassplayer.feature.library
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.plexglassplayer.core.model.MediaSourceType
-import com.plexglassplayer.core.model.QueueItem
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
 import com.plexglassplayer.data.repositories.DownloadManager
@@ -69,7 +67,7 @@ class TrackListViewModel @Inject constructor(
                 if (state is TrackListUiState.Success) {
                     val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
                     val startIndex = state.tracks.indexOfFirst { it.id == track.id }
-                    playbackManager.playTracks(queueItems, startIndex)
+                    playbackManager.playTracks(queueItems, if (startIndex != -1) startIndex else 0)
                     Timber.d("Started playback: ${track.title}")
                 }
             } catch (e: Exception) {
