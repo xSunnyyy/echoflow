@@ -15,8 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-// Import the correct model and status from core
-import com.plexglassplayer.core.model.Download
+import com.plexglassplayer.core.model.DownloadEntity
 import com.plexglassplayer.core.model.DownloadStatus
 import com.plexglassplayer.core.ui.components.AlbumArt
 import com.plexglassplayer.core.ui.components.GlassCard
@@ -148,8 +147,6 @@ fun DownloadsScreen(
             }
 
             is DownloadsUiState.Error -> {
-                // Fix: Capture error message to local variable for smart casting
-                val message = state.errorMessage
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -157,7 +154,7 @@ fun DownloadsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = message ?: "Failed to load downloads",
+                        text = state.message,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -169,7 +166,7 @@ fun DownloadsScreen(
 
 @Composable
 private fun DownloadItem(
-    download: Download, // Replaced DownloadEntity with correct model
+    download: DownloadEntity,
     onCancelClick: (() -> Unit)?,
     onRetryClick: (() -> Unit)?,
     onDeleteClick: (() -> Unit)?,
@@ -220,11 +217,10 @@ private fun DownloadItem(
                     )
                 }
 
-                // Fix: Use local variable for item-level errorMessage smart cast
-                val itemError = download.errorMessage
-                if (download.status == DownloadStatus.FAILED && itemError != null) {
+                val errorMsg = download.errorMessage
+                if (download.status == DownloadStatus.FAILED && errorMsg != null) {
                     Text(
-                        text = itemError,
+                        text = errorMsg,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                         maxLines = 2,
