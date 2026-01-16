@@ -63,6 +63,10 @@ fun GlassCard(
                         )
                         // Keep it transparent; blur effect still applies to what it renders
                         alpha = 1f
+                        // CRITICAL: Disable touch interception so clicks pass through
+                        isClickable = false
+                        isFocusable = false
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                     }
                 },
                 update = { view ->
