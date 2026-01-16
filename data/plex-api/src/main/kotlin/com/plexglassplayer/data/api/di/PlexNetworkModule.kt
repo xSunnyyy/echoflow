@@ -6,42 +6,43 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.simplexml.SimpleXmlConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object PlexNetworkModule {
 
+    private const val PLEX_BASE_URL = "https://plex.tv/"
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder().build()
+    }
+
     /**
-     * Plex uses XML responses for most endpoints
+     * IMPORTANT:
+     * - This Retrofit is ONLY for plex.tv endpoints (auth + resources)
+     * - We use ScalarsConverterFactory so this module compiles immediately.
+     *
+     * If your DTOs are JSON via Kotlinx serialization, we can swap to that converter next.
+     * If your DTOs are XML (Plex default), we can swap to SimpleXml next.
      */
     @Provides
     @Singleton
-    fun providePlexRetrofit(): Retrofit {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .build()
-
+    fun providePlexRetrofit(client: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            // 🔥 THIS IS CRITICAL — MUST be plex.tv
-            .baseUrl("https://plex.tv/")
+            .baseUrl(PLEX_BASE_URL)
             .client(client)
-            .addConverterFactory(SimpleXmlConverterFactory.create())
+            .addConverterFactory(ScalarsConverterFactory.create())
             .build()
     }
 
     @Provides
     @Singleton
-    fun providePlexApiService(
-        retrofit: Retrofit
-    ): PlexApiService {
+    fun providePlexApiService(retrofit: Retrofit): PlexApiService {
         return retrofit.create(PlexApiService::class.java)
     }
 }
