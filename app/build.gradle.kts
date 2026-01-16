@@ -106,12 +106,18 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
+    // ✅ Media3 (REQUIRED because PlaybackService.kt lives in :app)
+    // Keep these versions the same as your other modules if you already use Media3 elsewhere.
+    implementation("androidx.media3:media3-common:1.4.1")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
+
     // Hilt (Dagger)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
-    // ✅ WorkManager + Hilt-Work (THIS is what fixes the workerFactory / NonExistentClass)
+    // ✅ WorkManager + Hilt-Work
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
