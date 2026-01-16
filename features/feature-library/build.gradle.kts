@@ -23,13 +23,16 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
-    implementation(libs.timber) // Add this
-    implementation(libs.androidx.compose.material.icons.extended)
     
     // Required to resolve PlaybackRepository and DownloadManager
     implementation(project(":data:repositories"))
     // Required to resolve PlaybackManager
     implementation(project(":features:feature-playback"))
+
+    // Fixes unresolved reference 'timber'
+    implementation(libs.timber)
+    // Fixes unresolved reference 'Download' (Icons.Default.Download)
+    implementation(libs.androidx.compose.material.icons.extended)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
