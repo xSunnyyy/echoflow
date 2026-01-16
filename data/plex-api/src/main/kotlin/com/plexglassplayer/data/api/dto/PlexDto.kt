@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 data class PinResponse(
     val id: String,
     val code: String,
-    @SerialName("authToken") val authToken: String?
+    @SerialName("authToken") val authToken: String? = null
 )
 
 // Plex resources (servers) DTOs
