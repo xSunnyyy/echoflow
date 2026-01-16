@@ -3,7 +3,7 @@ package com.plexglassplayer.data.api.service
 import com.plexglassplayer.data.api.dto.*
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.POST
+import retrofit2.http.Headers
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
@@ -11,38 +11,39 @@ import retrofit2.http.Url
 interface PlexApiService {
 
     // ----------------------------
-    // Auth endpoints (plex.tv)
+    // plex.tv endpoints (auth + resources)
     // ----------------------------
 
-    /**
-     * ✅ MUST be POST — Plex returns 405 if you use GET.
-     * Endpoint: https://plex.tv/api/v2/pins
-     */
-    @POST("api/v2/pins")
+    // NOTE: If you're still using the legacy PIN flow, this can remain GET.
+    // If Plex changes it on you again, you'll swap to clients.plex.tv + POST later.
+    @Headers("Accept: application/json")
+    @GET("api/v2/pins")
     suspend fun createPin(
         @Header("X-Plex-Client-Identifier") clientId: String,
         @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
         @Header("X-Plex-Version") version: String = "1.0"
     ): PinResponse
 
-    /**
-     * Poll pin for authToken
-     */
+    @Headers("Accept: application/json")
     @GET("api/v2/pins/{pinId}")
     suspend fun checkPin(
         @Path("pinId") pinId: String,
         @Header("X-Plex-Client-Identifier") clientId: String
     ): PinResponse
 
-    // ----------------------------
-    // Resources (servers) endpoint
-    // ----------------------------
-
+    /**
+     * ✅ IMPORTANT: resources is BEST consumed as JSON list
+     * (not MediaContainer XML) so we force JSON + model it correctly.
+     */
+    @Headers("Accept: application/json")
     @GET("api/v2/resources")
     suspend fun getResources(
         @Header("X-Plex-Token") token: String,
-        @Header("X-Plex-Client-Identifier") clientId: String
-    ): ResourcesResponse
+        @Header("X-Plex-Client-Identifier") clientId: String,
+        @Query("includeHttps") includeHttps: Int = 1,
+        @Query("includeRelay") includeRelay: Int = 1,
+        @Query("includeIPv6") includeIPv6: Int = 1
+    ): List<DeviceDto>
 
     // ----------------------------
     // Server endpoints (dynamic base URL)
