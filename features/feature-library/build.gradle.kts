@@ -23,6 +23,12 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    
+    // Required to resolve PlaybackRepository and DownloadManager
+    implementation(project(":data:repositories"))
+    // Required to resolve PlaybackManager
+    implementation(project(":features:feature-playback"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
