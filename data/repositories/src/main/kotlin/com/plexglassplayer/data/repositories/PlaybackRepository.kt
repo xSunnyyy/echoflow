@@ -24,8 +24,8 @@ class PlaybackRepository @Inject constructor(
      */
     suspend fun resolvePlaybackUri(track: Track): Uri {
         // Check if track is downloaded
-        val serverId = serverPreferences.getActiveServerUrl() ?: ""
-        val download = downloadDao.findCompletedDownload(serverId, track.id)
+        val serverUrl = serverPreferences.getActiveServerUrl() ?: ""
+        val download = downloadDao.findCompletedDownload(serverUrl, track.id)
 
         return if (download != null && download.filePath != null) {
             val file = File(download.filePath)
@@ -51,7 +51,6 @@ class PlaybackRepository @Inject constructor(
             ?: throw IllegalStateException("No auth token")
 
         // Build Plex streaming URL
-        // Format: {baseUrl}{track.streamKey}?X-Plex-Token={token}
         return Uri.parse("$baseUrl${track.streamKey}")
             .buildUpon()
             .appendQueryParameter("X-Plex-Token", token)
@@ -69,8 +68,8 @@ class PlaybackRepository @Inject constructor(
             trackId = track.id,
             title = track.title,
             artist = track.artistName,
-            album = track.albumTitle,
-            artworkUrl = track.artUrl,
+            album = track.albumTitle ?: "",
+            artworkUrl = track.artUrl ?: "",
             source = if (isLocal) MediaSourceType.LOCAL else MediaSourceType.STREAM,
             uri = uri.toString()
         )
@@ -78,8 +77,9 @@ class PlaybackRepository @Inject constructor(
 
     /**
      * Convert multiple tracks to queue items
+     * Renamed to convertTracksToQueue to match TrackListViewModel's expectation
      */
-    suspend fun tracksToQueueItems(tracks: List<Track>): List<QueueItem> {
+    suspend fun convertTracksToQueue(tracks: List<Track>): List<QueueItem> {
         return tracks.map { trackToQueueItem(it) }
     }
 }
