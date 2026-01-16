@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":core:core-db"))
+    implementation(project(":data:repositories"))
     
     // Required to resolve DownloadManager and other repositories
     implementation(project(":data:repositories"))
