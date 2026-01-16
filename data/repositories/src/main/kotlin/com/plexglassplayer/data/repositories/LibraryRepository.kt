@@ -52,6 +52,17 @@ class LibraryRepository @Inject constructor(
         response.container.metadata.map { it.toModel() }
     }
 
+    suspend fun getAllTracks(offset: Int = 0, limit: Int = 100): Result<List<Track>> = suspendRunCatching {
+        val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
+        val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
+        val sectionKey = serverPreferences.getMusicSectionKey() ?: throw IllegalStateException("No music section")
+
+        // Get all tracks from the music library section (type=10 means tracks)
+        val url = "$baseUrl/library/sections/$sectionKey/all?type=10"
+        val response = apiService.getTracks(url, token, offset, limit)
+        response.container.metadata.map { it.toModel() }
+    }
+
     suspend fun getPlaylists(): Result<List<Playlist>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")

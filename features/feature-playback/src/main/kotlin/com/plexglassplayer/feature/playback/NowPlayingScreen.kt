@@ -32,6 +32,8 @@ fun NowPlayingScreen(
     val currentTrack by playbackManager.currentTrack.collectAsState()
     val isPlaying by playbackManager.isPlaying.collectAsState()
     val duration by playbackManager.duration.collectAsState()
+    val shuffleEnabled by playbackManager.shuffleEnabled.collectAsState()
+    val repeatMode by playbackManager.repeatMode.collectAsState()
 
     var currentPosition by remember { mutableLongStateOf(0L) }
 
@@ -198,11 +200,11 @@ fun NowPlayingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Shuffle
-                IconButton(onClick = { /* TODO: Toggle shuffle */ }) {
+                IconButton(onClick = { playbackManager.toggleShuffle() }) {
                     Icon(
                         Icons.Default.Shuffle,
                         "Shuffle",
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = if (shuffleEnabled) Color.White else Color.White.copy(alpha = 0.4f),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -243,11 +245,17 @@ fun NowPlayingScreen(
                 }
 
                 // Repeat
-                IconButton(onClick = { /* TODO: Toggle repeat */ }) {
+                IconButton(onClick = { playbackManager.toggleRepeatMode() }) {
                     Icon(
-                        Icons.Default.Repeat,
-                        "Repeat",
-                        tint = Color.White.copy(alpha = 0.7f),
+                        imageVector = when (repeatMode) {
+                            com.plexglassplayer.core.model.RepeatMode.ONE -> Icons.Default.RepeatOne
+                            else -> Icons.Default.Repeat
+                        },
+                        contentDescription = "Repeat",
+                        tint = when (repeatMode) {
+                            com.plexglassplayer.core.model.RepeatMode.OFF -> Color.White.copy(alpha = 0.4f)
+                            else -> Color.White
+                        },
                         modifier = Modifier.size(32.dp)
                     )
                 }
