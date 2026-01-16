@@ -2,8 +2,8 @@ package com.plexglassplayer.feature.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -70,7 +70,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.LibraryMusic,
+                            imageVector = Icons.Filled.MusicNote,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp)
                         )
@@ -126,7 +126,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Download,
+                            imageVector = Icons.Filled.GetApp,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp)
                         )
