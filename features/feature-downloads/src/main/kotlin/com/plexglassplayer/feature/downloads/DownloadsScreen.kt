@@ -5,7 +5,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Download
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -66,7 +69,7 @@ fun DownloadsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            Icons.Default.Download,
+                            imageVector = Icons.AutoMirrored.Filled.Download,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -232,19 +235,19 @@ private fun DownloadItem(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 onCancelClick?.let {
                     IconButton(onClick = it) {
-                        Icon(Icons.Default.Close, "Cancel")
+                        Icon(Icons.Filled.Close, "Cancel")
                     }
                 }
 
                 onRetryClick?.let {
                     IconButton(onClick = it) {
-                        Icon(Icons.Default.Refresh, "Retry")
+                        Icon(Icons.Filled.Refresh, "Retry")
                     }
                 }
 
                 onDeleteClick?.let {
                     IconButton(onClick = it) {
-                        Icon(Icons.Default.Delete, "Delete")
+                        Icon(Icons.Filled.Delete, "Delete")
                     }
                 }
             }
