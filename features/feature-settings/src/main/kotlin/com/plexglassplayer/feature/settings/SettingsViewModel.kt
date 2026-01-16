@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -29,11 +30,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val serverUrl = serverPreferences.getActiveServerUrl()
-                val serverId = serverPreferences.getActiveServerId()
-                val serverName = serverPreferences.getActiveServerName()
-
+                // Use the first value from the existing flow for the ID
+                val serverId = serverPreferences.activeServerIdFlow.first() 
+                
+                // Note: Server Name is currently not stored in ServerPreferences
                 _uiState.value = SettingsUiState.Success(
-                    serverName = serverName ?: "Unknown Server",
+                    serverName = "Plex Server", // Placeholder or update ServerPreferences
                     serverUrl = serverUrl ?: "",
                     serverId = serverId ?: ""
                 )
@@ -47,7 +49,8 @@ class SettingsViewModel @Inject constructor(
     fun logout(onLogoutComplete: () -> Unit) {
         viewModelScope.launch {
             try {
-                authRepository.clearSession()
+                // Changed from clearSession() to signOut() to match AuthRepository.kt
+                authRepository.signOut() 
                 serverPreferences.clearActiveServer()
                 Timber.d("Logged out successfully")
                 onLogoutComplete()
@@ -67,14 +70,4 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
-}
-
-sealed class SettingsUiState {
-    data object Loading : SettingsUiState()
-    data class Success(
-        val serverName: String,
-        val serverUrl: String,
-        val serverId: String
-    ) : SettingsUiState()
-    data class Error(val message: String) : SettingsUiState()
 }
