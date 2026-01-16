@@ -28,12 +28,6 @@ android {
     }
 }
 
-// If you *still* get the “@AndroidEntryPoint must extend Service” error after deleting the duplicate service,
-// uncomment this block. You should not need it anymore.
-// ksp {
-//     arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
-// }
-
 dependencies {
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-model"))
@@ -49,8 +43,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
-    // ✅ Media3 (explicit)
-    implementation(libs.androidx.media3.common)
+    // Media3
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
