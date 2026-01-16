@@ -9,33 +9,57 @@ plugins {
 android {
     namespace = "com.plexglassplayer.feature.playback"
     compileSdk = 35
-    defaultConfig { minSdk = 26 }
+
+    defaultConfig {
+        minSdk = 26
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        compose = true
+    }
 }
+
+// If you *still* get the “@AndroidEntryPoint must extend Service” error after deleting the duplicate service,
+// uncomment this block. You should not need it anymore.
+// ksp {
+//     arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+// }
 
 dependencies {
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+
+    // ✅ Media3 (explicit)
+    implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
+
+    // Hilt
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
+
     implementation(libs.coil.compose)
     implementation(libs.timber)
-    ksp(libs.hilt.compiler)
 }
