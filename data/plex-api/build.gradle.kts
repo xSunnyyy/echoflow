@@ -31,10 +31,15 @@ dependencies {
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.androidx.core.ktx)
+
+    // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
 
     // Networking
     implementation(libs.okhttp)
+    // ✅ Needed for HttpLoggingInterceptor
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
 
