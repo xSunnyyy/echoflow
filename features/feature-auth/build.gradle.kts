@@ -33,6 +33,9 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
+    
+    // Add the missing project dependency identified earlier
+    implementation(project(":data:plex-auth"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -42,6 +45,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
+
+    // Logging dependency
+    implementation(libs.timber) // Fixes the Timber unresolved reference
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
