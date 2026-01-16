@@ -20,8 +20,8 @@ interface PlexApiService {
         @Header("X-Plex-Client-Identifier") clientId: String,
         @Header("X-Plex-Product") product: String = "PlexGlassPlayer",
         @Header("X-Plex-Version") version: String = "1.0",
-        // optional but harmless; some setups use it
-        @Query("strong") strong: Boolean = true
+        // strong=false gives a 4-digit PIN, strong=true gives a longer alphanumeric code
+        @Query("strong") strong: Boolean = false
     ): PinResponse
 
     @GET("api/v2/pins/{pinId}")
