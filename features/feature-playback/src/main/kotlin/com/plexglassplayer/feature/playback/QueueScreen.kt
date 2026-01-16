@@ -22,7 +22,8 @@ import com.plexglassplayer.core.ui.components.GlassCard
 fun QueueScreen(
     playbackManager: PlaybackManager,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNowPlayingClick: () -> Unit = {}
 ) {
     val queue by playbackManager.queue.collectAsState()
     val currentIndex by playbackManager.currentIndex.collectAsState()
@@ -109,6 +110,7 @@ fun QueueScreen(
                         isPlaying = isPlaying,
                         onPlayPause = { playbackManager.playPause() },
                         onNext = { playbackManager.playNext() },
+                        onClick = onNowPlayingClick,
                         modifier = Modifier.align(Alignment.BottomCenter)
                     )
                 }
@@ -214,6 +216,7 @@ private fun NowPlayingBar(
     isPlaying: Boolean,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     GlassCard(
@@ -225,6 +228,7 @@ private fun NowPlayingBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onClick)
                 .padding(16.dp)
         ) {
             // "Now Playing" label

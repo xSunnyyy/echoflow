@@ -29,7 +29,8 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
-    playbackManager: PlaybackManager = hiltViewModel<HomeScreenPlaybackViewModel>().playbackManager
+    playbackManager: PlaybackManager = hiltViewModel<HomeScreenPlaybackViewModel>().playbackManager,
+    onNowPlayingClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentTrack by playbackManager.currentTrack.collectAsState()
@@ -68,7 +69,7 @@ fun HomeScreen(
                             start = 16.dp,
                             end = 16.dp,
                             top = 16.dp,
-                            bottom = if (currentTrack != null) 140.dp else 16.dp
+                            bottom = if (currentTrack != null) 160.dp else 16.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -78,17 +79,6 @@ fun HomeScreen(
                                 onClick = { viewModel.playTrack(track) }
                             )
                         }
-                    }
-
-                    // Now playing at bottom
-                    if (currentTrack != null) {
-                        NowPlayingBar(
-                            track = currentTrack!!,
-                            isPlaying = isPlaying,
-                            onPlayPause = { playbackManager.playPause() },
-                            onNext = { playbackManager.playNext() },
-                            modifier = Modifier.align(Alignment.BottomCenter)
-                        )
                     }
                 }
 
@@ -102,6 +92,18 @@ fun HomeScreen(
                         onRetry = { viewModel.loadTracks() }
                     )
                 }
+            }
+
+            // Now playing at bottom (outside the when block to ensure it's always on top)
+            if (currentTrack != null) {
+                NowPlayingBar(
+                    track = currentTrack!!,
+                    isPlaying = isPlaying,
+                    onPlayPause = { playbackManager.playPause() },
+                    onNext = { playbackManager.playNext() },
+                    onClick = onNowPlayingClick,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
     }
@@ -162,6 +164,7 @@ private fun NowPlayingBar(
     isPlaying: Boolean,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     GlassCard(
@@ -173,6 +176,7 @@ private fun NowPlayingBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onClick)
                 .padding(16.dp)
         ) {
             // "Now Playing" label
@@ -197,7 +201,9 @@ private fun NowPlayingBar(
 
                 // Track info
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onClick),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
@@ -218,7 +224,7 @@ private fun NowPlayingBar(
                 }
 
                 // Play/Pause button
-                IconButton(onClick = onPlayPause) {
+                IconButton(onClick = { onPlayPause() }) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
@@ -227,7 +233,7 @@ private fun NowPlayingBar(
                 }
 
                 // Next button
-                IconButton(onClick = onNext) {
+                IconButton(onClick = { onNext() }) {
                     Icon(
                         Icons.Default.SkipNext,
                         contentDescription = "Next",
