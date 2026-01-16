@@ -3,11 +3,12 @@ package com.plexglassplayer.core.ui.components
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
+import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,9 +16,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.plexglassplayer.core.ui.theme.GlassTheme
 
 /**
@@ -25,9 +27,9 @@ import com.plexglassplayer.core.ui.theme.GlassTheme
  *
  * ✅ IMPORTANT:
  * - We DO NOT blur the content (children).
- * - Instead, we blur an empty background layer and draw content above it.
+ * - We blur an EMPTY Android View layer (Android 12+) behind the Compose content.
  *
- * Blur only works on Android 12+, gracefully degrades to translucent on older devices
+ * Blur only works on Android 12+, gracefully degrades to translucent on older devices.
  */
 @Composable
 fun GlassCard(
@@ -38,36 +40,57 @@ fun GlassCard(
     content: @Composable BoxScope.() -> Unit
 ) {
     val glassColors = GlassTheme.colors
+    val blurPx = with(LocalDensity.current) { blurRadius.toPx() }
 
     Box(
         modifier = modifier.clip(shape)
     ) {
-        // ✅ 1) Backdrop blur layer (EMPTY layer — will not blur children)
+        // ✅ 1) Backdrop blur layer (EMPTY VIEW — will not blur children)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer {
-                        renderEffect = RenderEffect.createBlurEffect(
-                            blurRadius.value,
-                            blurRadius.value,
-                            Shader.TileMode.CLAMP
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    View(context).apply {
+                        // Make sure this view draws (even though it's visually transparent)
+                        setWillNotDraw(false)
+                        // Apply blur to this view's render output
+                        setRenderEffect(
+                            RenderEffect.createBlurEffect(
+                                blurPx,
+                                blurPx,
+                                Shader.TileMode.CLAMP
+                            )
+                        )
+                        // Keep it transparent; blur effect still applies to what it renders
+                        alpha = 1f
+                    }
+                },
+                update = { view ->
+                    // In case blurRadius changes dynamically
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        view.setRenderEffect(
+                            RenderEffect.createBlurEffect(
+                                blurPx,
+                                blurPx,
+                                Shader.TileMode.CLAMP
+                            )
                         )
                     }
+                }
             )
         }
 
         // ✅ 2) Frosted surface fill (translucent)
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .background(glassColors.surface, shape)
         )
 
         // ✅ 3) Stroke border
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .border(
                     width = 1.dp,
                     color = glassColors.stroke,
@@ -79,7 +102,7 @@ fun GlassCard(
         if (showHighlight) {
             Box(
                 modifier = Modifier
-                    .matchParentSize()
+                    .fillMaxSize()
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
@@ -94,7 +117,7 @@ fun GlassCard(
 
         // ✅ 5) Content (NOT blurred)
         Box(
-            modifier = Modifier.matchParentSize(),
+            modifier = Modifier.fillMaxSize(),
             content = content
         )
     }
