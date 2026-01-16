@@ -62,23 +62,31 @@ android {
 }
 
 dependencies {
-    // Core modules
+    /* ----------------------------
+     * Core modules
+     * ---------------------------- */
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-model"))
     implementation(project(":core:core-network"))
     implementation(project(":core:core-db"))
     implementation(project(":core:core-util"))
 
-    // Data modules
+    /* ----------------------------
+     * Data modules
+     * ---------------------------- */
     implementation(project(":data:plex-auth"))
     implementation(project(":data:plex-api"))
     implementation(project(":data:repositories"))
     implementation(project(":data:cache"))
 
-    // Domain
+    /* ----------------------------
+     * Domain
+     * ---------------------------- */
     implementation(project(":domain"))
 
-    // Features
+    /* ----------------------------
+     * Features
+     * ---------------------------- */
     implementation(project(":features:feature-auth"))
     implementation(project(":features:feature-server"))
     implementation(project(":features:feature-home"))
@@ -88,13 +96,17 @@ dependencies {
     implementation(project(":features:feature-downloads"))
     implementation(project(":features:feature-settings"))
 
-    // AndroidX Core
+    /* ----------------------------
+     * AndroidX Core
+     * ---------------------------- */
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
 
-    // Compose
+    /* ----------------------------
+     * Compose
+     * ---------------------------- */
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -103,19 +115,40 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
-    // Hilt
+    /* ----------------------------
+     * 🔊 Media3 (REQUIRED for PlaybackService in :app)
+     * ---------------------------- */
+    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+
+    /* ----------------------------
+     * 🧠 Hilt
+     * ---------------------------- */
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
-    // Timber
+    /* ----------------------------
+     * 🛠 WorkManager + Hilt integration (FIXES NonExistentClass)
+     * ---------------------------- */
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
+    /* ----------------------------
+     * Timber
+     * ---------------------------- */
     implementation(libs.timber)
 
-    // Debug
+    /* ----------------------------
+     * Debug
+     * ---------------------------- */
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Testing
+    /* ----------------------------
+     * Testing
+     * ---------------------------- */
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
