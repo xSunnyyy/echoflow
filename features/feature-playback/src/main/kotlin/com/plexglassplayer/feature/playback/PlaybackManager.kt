@@ -52,7 +52,7 @@ class PlaybackManager @Inject constructor(
     private fun initializeController() {
         val sessionToken = SessionToken(
             context,
-            ComponentName(context, com.plexglassplayer.playback.PlaybackService::class.java)
+            ComponentName(context, PlaybackService::class.java)
         )
 
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()

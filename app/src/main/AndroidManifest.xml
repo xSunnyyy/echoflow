@@ -49,7 +49,7 @@
 
         <!-- Playback Service -->
         <service
-            android:name=".playback.PlaybackService"
+            android:name="com.plexglassplayer.feature.playback.PlaybackService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">

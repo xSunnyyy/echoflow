@@ -10,15 +10,15 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.plexglassplayer.core.db.dao.DownloadDao
 import com.plexglassplayer.core.db.entity.DownloadDbEntity
+import com.plexglassplayer.core.db.entity.toModel
 import com.plexglassplayer.core.model.DownloadEntity
 import com.plexglassplayer.core.model.DownloadStatus
 import com.plexglassplayer.core.model.Track
-import com.plexglassplayer.data.cache.ServerPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,7 +52,7 @@ class DownloadManager @Inject constructor(
      * Check if a track is downloaded
      */
     suspend fun isTrackDownloaded(trackId: String): Boolean {
-        val serverId = serverPreferences.getActiveServerId() ?: return false
+        val serverId = serverPreferences.activeServerIdFlow.first() ?: return false
         val download = downloadDao.findCompletedDownload(serverId, trackId)
         return download != null && download.filePath?.let { java.io.File(it).exists() } == true
     }
@@ -61,7 +61,7 @@ class DownloadManager @Inject constructor(
      * Download a single track
      */
     suspend fun downloadTrack(track: Track) {
-        val serverId = serverPreferences.getActiveServerId() ?: run {
+        val serverId = serverPreferences.activeServerIdFlow.first() ?: run {
             Timber.w("Cannot download: no active server")
             return
         }
@@ -82,9 +82,9 @@ class DownloadManager @Inject constructor(
             serverId = serverId,
             trackId = track.id,
             title = track.title,
-            artist = track.artist,
-            album = track.album ?: "",
-            artworkUrl = track.artworkUrl,
+            artist = track.artistName,
+            album = track.albumTitle,
+            artworkUrl = track.artUrl,
             status = "QUEUED",
             progressPct = 0,
             bytesDownloaded = 0,
@@ -100,7 +100,7 @@ class DownloadManager @Inject constructor(
 
         // Create work request
         val streamUrl = "${serverPreferences.getActiveServerUrl()}${track.streamKey}"
-        val fileName = sanitizeFileName("${track.artist} - ${track.title}.${getExtension(track.streamKey)}")
+        val fileName = sanitizeFileName("${track.artistName} - ${track.title}.${getExtension(track.streamKey)}")
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)

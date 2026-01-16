@@ -35,5 +35,7 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.timber)
     ksp(libs.hilt.compiler)
 }
