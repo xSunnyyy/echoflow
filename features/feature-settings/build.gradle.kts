@@ -21,6 +21,11 @@ android {
 dependencies {
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-model"))
+    
+    // Data module dependencies required for SettingsViewModel
+    implementation(project(":data:plex-auth"))
+    implementation(project(":data:repositories"))
+ 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
