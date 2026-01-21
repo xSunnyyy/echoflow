@@ -23,10 +23,12 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":core:core-db"))
+
+    // Required to resolve DownloadManager and other repositories
     implementation(project(":data:repositories"))
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Fixed: Added timber to resolve unresolved reference 'timber' and 'Timber' in ViewModel
+    // Fixes: Added timber to resolve unresolved reference 'timber' and 'Timber' in ViewModel
     implementation(libs.timber)
 
     implementation(libs.androidx.core.ktx)

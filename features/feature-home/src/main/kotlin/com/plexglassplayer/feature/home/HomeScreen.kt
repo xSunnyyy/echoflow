@@ -210,7 +210,7 @@ fun HomeScreen(
             }
         }
     }
-}
+
 
 @Composable
 private fun RecentlyPlayedCard(
