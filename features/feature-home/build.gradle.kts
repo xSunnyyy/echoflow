@@ -38,4 +38,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.timber)
     ksp(libs.hilt.compiler)
+
+    // --- ADDED THIS LINE ---
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }

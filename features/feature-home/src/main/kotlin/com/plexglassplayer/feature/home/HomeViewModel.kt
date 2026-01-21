@@ -8,6 +8,7 @@ import com.plexglassplayer.data.repositories.LibraryRepository
 import com.plexglassplayer.data.repositories.PlaybackRepository
 import com.plexglassplayer.feature.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +20,11 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val playbackRepository: PlaybackRepository,
-    private val playbackManager: PlaybackManager
+    val playbackManager: PlaybackManager
 ) : ViewModel() {
+
+    private val _userName = MutableStateFlow("User")
+    val userName: StateFlow<String> = _userName.asStateFlow()
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -29,26 +33,30 @@ class HomeViewModel @Inject constructor(
         loadTracks()
     }
 
+    fun updateUserName(newName: String) {
+        _userName.value = newName
+    }
+
     fun loadTracks() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
 
-            when (val result = libraryRepository.getAllTracks(offset = 0, limit = 200)) {
-                is Result.Success -> {
-                    val tracks = result.data
-                    if (tracks.isEmpty()) {
-                        _uiState.value = HomeUiState.Empty
-                    } else {
-                        _uiState.value = HomeUiState.Success(tracks)
-                    }
-                }
-                is Result.Error -> {
-                    Timber.e(result.exception, "Failed to load tracks")
-                    _uiState.value = HomeUiState.Error(
-                        result.exception.message ?: "Failed to load tracks"
-                    )
-                }
-                else -> {}
+            // Fetch Recent and All Tracks in parallel
+            val recentDeferred = async { libraryRepository.getRecentTracks(limit = 10) }
+            val allDeferred = async { libraryRepository.getAllTracks(offset = 0, limit = 200) }
+
+            val recentResult = recentDeferred.await()
+            val allResult = allDeferred.await()
+
+            if (allResult is Result.Success && recentResult is Result.Success) {
+                _uiState.value = HomeUiState.Success(
+                    recentTracks = recentResult.data,
+                    allTracks = allResult.data
+                )
+            } else if (allResult is Result.Error) {
+                _uiState.value = HomeUiState.Error(allResult.exception.message ?: "Error")
+            } else {
+                _uiState.value = HomeUiState.Error("Unknown error")
             }
         }
     }
@@ -58,9 +66,11 @@ class HomeViewModel @Inject constructor(
             try {
                 val state = _uiState.value
                 if (state is HomeUiState.Success) {
-                    val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
-                    val startIndex = state.tracks.indexOfFirst { it.id == track.id }
-                    playbackManager.playTracks(queueItems, if (startIndex != -1) startIndex else 0)
+                    // Play context depends on where the user clicked (Recent or All)
+                    // For simplicity, we just queue this specific track, or queue surrounding tracks
+                    // Here we just play the single track or find it in the 'all' list
+                    val queueItems = playbackRepository.convertTracksToQueue(listOf(track))
+                    playbackManager.playTracks(queueItems, 0)
                     Timber.d("Started playback: ${track.title}")
                 }
             } catch (e: Exception) {
@@ -70,9 +80,13 @@ class HomeViewModel @Inject constructor(
     }
 }
 
+// Updated State to hold both lists
 sealed class HomeUiState {
     data object Loading : HomeUiState()
-    data class Success(val tracks: List<Track>) : HomeUiState()
+    data class Success(
+        val recentTracks: List<Track>,
+        val allTracks: List<Track>
+    ) : HomeUiState()
     data object Empty : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }

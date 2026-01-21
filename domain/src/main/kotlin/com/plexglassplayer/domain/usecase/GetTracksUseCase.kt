@@ -8,7 +8,14 @@ import javax.inject.Inject
 class GetTracksUseCase @Inject constructor(
     private val libraryRepository: LibraryRepository
 ) {
-    suspend operator fun invoke(albumId: String, offset: Int = 0, limit: Int = 50): Result<List<Track>> {
-        return libraryRepository.getTracks(albumId, offset, limit)
+    // FIX: Changed default limit from 50 to 10000 to ensure ALL songs load
+    suspend operator fun invoke(albumId: String?, offset: Int = 0, limit: Int = 10000): Result<List<Track>> {
+        return if (albumId == null) {
+            // "All Music" mode
+            libraryRepository.getAllTracks(offset, limit)
+        } else {
+            // "Album" mode
+            libraryRepository.getTracks(albumId, offset, limit)
+        }
     }
 }

@@ -26,8 +26,9 @@ class TrackListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val albumId: String = savedStateHandle["albumId"]
-        ?: throw IllegalArgumentException("albumId is required")
+    // FIX: Changed from String to String? and removed the 'throw'
+    // Now it won't crash if 'albumId' is missing (like in "All Music" mode)
+    private val albumId: String? = savedStateHandle["albumId"]
 
     private val _uiState = MutableStateFlow<TrackListUiState>(TrackListUiState.Loading)
     val uiState: StateFlow<TrackListUiState> = _uiState.asStateFlow()
@@ -40,6 +41,8 @@ class TrackListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = TrackListUiState.Loading
 
+            // FIX: We pass the nullable albumId.
+            // Ensure your GetTracksUseCase.invoke parameter is also nullable (String?)
             when (val result = getTracksUseCase(albumId = albumId)) {
                 is Result.Success -> {
                     val tracks = result.data
