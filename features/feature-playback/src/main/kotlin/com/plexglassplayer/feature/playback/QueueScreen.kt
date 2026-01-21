@@ -14,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plexglassplayer.core.model.QueueItem
+import com.plexglassplayer.core.model.RepeatMode
 import com.plexglassplayer.core.ui.components.AlbumArt
 import com.plexglassplayer.core.ui.components.GlassCard
+import com.plexglassplayer.core.util.formatDuration
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,11 +32,24 @@ fun QueueScreen(
     val currentIndex by playbackManager.currentIndex.collectAsState()
     val currentTrack by playbackManager.currentTrack.collectAsState()
     val isPlaying by playbackManager.isPlaying.collectAsState()
+    val shuffleEnabled by playbackManager.shuffleEnabled.collectAsState()
+    val repeatMode by playbackManager.repeatMode.collectAsState()
+    val duration by playbackManager.duration.collectAsState()
+
+    var currentPosition by remember { mutableLongStateOf(0L) }
+
+    // Update position while playing
+    LaunchedEffect(isPlaying) {
+        while (isPlaying) {
+            currentPosition = playbackManager.getCurrentPosition()
+            delay(1000)
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Queue (${queue.size})") },
+                title = { Text("Queue") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -50,247 +66,352 @@ fun QueueScreen(
         },
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (queue.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MusicNote,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "Queue is empty",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                // Queue list (excluding current track)
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 16.dp,
-                        bottom = if (currentTrack != null) 120.dp else 16.dp // Space for now playing
-                    ),
+        if (queue.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(
-                        queue.filterIndexed { index, _ -> index != currentIndex },
-                        key = { index, item -> "${index}_${item.trackId}" }
-                    ) { _, track ->
-                        val originalIndex = queue.indexOf(track)
-                        QueueItem(
-                            track = track,
-                            isCurrentlyPlaying = false,
-                            onClick = { playbackManager.playFromQueue(originalIndex) },
-                            onRemoveClick = { playbackManager.removeFromQueue(originalIndex) }
-                        )
-                    }
-                }
-
-                // Now playing at bottom with dark glass UI
-                if (currentTrack != null) {
-                    NowPlayingBar(
-                        track = currentTrack!!,
-                        isPlaying = isPlaying,
-                        onPlayPause = { playbackManager.playPause() },
-                        onNext = { playbackManager.playNext() },
-                        onClick = onNowPlayingClick,
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QueueItem(
-    track: QueueItem,
-    isCurrentlyPlaying: Boolean,
-    onClick: () -> Unit,
-    onRemoveClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    GlassCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Album art with playing indicator
-            Box {
-                AlbumArt(
-                    artUrl = track.artworkUrl,
-                    size = 56.dp,
-                    cornerRadius = 4.dp
-                )
-
-                if (isCurrentlyPlaying) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(24.dp),
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-                    ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(4.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
-
-            // Track info
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (isCurrentlyPlaying) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
-
-                Text(
-                    text = "${track.artist} • ${track.album}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Remove button (only for non-playing tracks)
-            if (!isCurrentlyPlaying) {
-                IconButton(onClick = onRemoveClick) {
                     Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Remove from queue",
+                        Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        "Queue is empty",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            } else {
-                // Placeholder to maintain alignment
-                Spacer(modifier = Modifier.size(48.dp))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Now Playing Card at top
+                if (currentTrack != null) {
+                    item {
+                        NowPlayingCard(
+                            track = currentTrack!!,
+                            isPlaying = isPlaying,
+                            duration = duration,
+                            currentPosition = currentPosition,
+                            shuffleEnabled = shuffleEnabled,
+                            repeatMode = repeatMode,
+                            onPlayPause = { playbackManager.playPause() },
+                            onNext = { playbackManager.playNext() },
+                            onPrevious = { playbackManager.playPrevious() },
+                            onSeek = { playbackManager.seekTo(it) },
+                            onToggleShuffle = { playbackManager.toggleShuffle() },
+                            onToggleRepeat = { playbackManager.toggleRepeatMode() },
+                            onClick = onNowPlayingClick
+                        )
+                    }
+                }
+
+                // Upcoming Songs Card
+                val upcomingTracks = queue.drop(currentIndex + 1)
+                if (upcomingTracks.isNotEmpty()) {
+                    item {
+                        UpcomingSongsCard(
+                            tracks = upcomingTracks,
+                            startIndex = currentIndex + 1,
+                            onTrackClick = { index -> playbackManager.playFromQueue(index) },
+                            onRemoveClick = { index -> playbackManager.removeFromQueue(index) }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun NowPlayingBar(
+private fun NowPlayingCard(
     track: QueueItem,
     isPlaying: Boolean,
+    duration: Long,
+    currentPosition: Long,
+    shuffleEnabled: Boolean,
+    repeatMode: RepeatMode,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onToggleShuffle: () -> Unit,
+    onToggleRepeat: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     GlassCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = modifier.fillMaxWidth(),
         blurRadius = 32.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(16.dp)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // "Now Playing" label
             Text(
                 text = "Now Playing",
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier
+                    .align(Alignment.Start)
+                    .padding(bottom = 16.dp)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Album art
-                AlbumArt(
-                    artUrl = track.artworkUrl,
-                    size = 64.dp,
-                    cornerRadius = 8.dp
+            // Album artwork
+            AlbumArt(
+                artUrl = track.artworkUrl,
+                size = 200.dp,
+                cornerRadius = 12.dp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Track info
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "${track.artist} • ${track.album}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Progress bar
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Slider(
+                    value = if (duration > 0) (currentPosition.toFloat() / duration) else 0f,
+                    onValueChange = { value ->
+                        onSeek((value * duration).toLong())
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                // Track info
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Text(
-                        text = "${track.artist} • ${track.album}",
+                        text = currentPosition.formatDuration(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-
-                // Play/Pause button
-                IconButton(onClick = onPlayPause) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Next button
-                IconButton(onClick = onNext) {
-                    Icon(
-                        Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = MaterialTheme.colorScheme.onSurface
+                    Text(
+                        text = duration.formatDuration(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Playback controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Shuffle
+                IconButton(onClick = onToggleShuffle) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        "Shuffle",
+                        tint = if (shuffleEnabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        },
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // Previous
+                IconButton(onClick = onPrevious) {
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        "Previous",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+
+                // Play/Pause
+                FilledIconButton(
+                    onClick = onPlayPause,
+                    modifier = Modifier.size(64.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                // Next
+                IconButton(onClick = onNext) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        "Next",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+
+                // Repeat
+                IconButton(onClick = onToggleRepeat) {
+                    Icon(
+                        imageVector = when (repeatMode) {
+                            RepeatMode.ONE -> Icons.Default.RepeatOne
+                            else -> Icons.Default.Repeat
+                        },
+                        contentDescription = "Repeat",
+                        tint = when (repeatMode) {
+                            RepeatMode.OFF -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            else -> MaterialTheme.colorScheme.primary
+                        },
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingSongsCard(
+    tracks: List<QueueItem>,
+    startIndex: Int,
+    onTrackClick: (Int) -> Unit,
+    onRemoveClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        blurRadius = 32.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // "Upcoming Songs" label
+            Text(
+                text = "Upcoming Songs",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            // List of upcoming tracks
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tracks.forEachIndexed { relativeIndex, track ->
+                    val absoluteIndex = startIndex + relativeIndex
+                    UpcomingTrackItem(
+                        track = track,
+                        position = relativeIndex + 1,
+                        onClick = { onTrackClick(absoluteIndex) },
+                        onRemoveClick = { onRemoveClick(absoluteIndex) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingTrackItem(
+    track: QueueItem,
+    position: Int,
+    onClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Position number
+        Text(
+            text = position.toString(),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(24.dp)
+        )
+
+        // Album art
+        AlbumArt(
+            artUrl = track.artworkUrl,
+            size = 48.dp,
+            cornerRadius = 4.dp
+        )
+
+        // Track info
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Text(
+                text = "${track.artist} • ${track.album}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Remove button
+        IconButton(onClick = onRemoveClick) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove from queue",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
