@@ -58,15 +58,15 @@ fun NowPlayingScreen(
                 contentScale = ContentScale.Crop
             )
 
-            // Gradient overlay for better readability
+            // Dark gradient overlay for better readability
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xFF6B4E71).copy(alpha = 0.85f),
-                                Color(0xFF4A3A4D).copy(alpha = 0.95f)
+                                Color.Black.copy(alpha = 0.6f),
+                                Color.Black.copy(alpha = 0.8f)
                             )
                         )
                     )
@@ -81,14 +81,15 @@ fun NowPlayingScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top bar
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 8.dp)
             ) {
-                IconButton(onClick = onBackClick) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         "Back",
@@ -100,11 +101,21 @@ fun NowPlayingScreen(
                 Text(
                     text = "Now Playing",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
                 )
 
-                // Invisible spacer to center the title
-                Spacer(modifier = Modifier.size(48.dp))
+                IconButton(
+                    onClick = onQueueClick,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        Icons.Default.QueueMusic,
+                        "Queue",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(40.dp))
