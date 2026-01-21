@@ -3,22 +3,24 @@ package com.plexglassplayer.feature.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.ui.components.*
 import com.plexglassplayer.feature.playback.PlaybackManager
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +42,10 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("All Tracks") },
+                    title = { Text("Home") },
                     actions = {
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(Icons.Default.Settings, "Settings")
+                        IconButton(onClick = onSearchClick) {
+                            Icon(Icons.Default.Search, "Search")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -61,7 +63,7 @@ fun HomeScreen(
                             .padding(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
-                        LoadingState(message = "Loading tracks...")
+                        LoadingState(message = "Loading...")
                     }
                 }
 
@@ -69,18 +71,103 @@ fun HomeScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = paddingValues.calculateTopPadding() + 16.dp,
-                            bottom = if (currentTrack != null) 160.dp else 16.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = if (currentTrack != null) 120.dp else 16.dp
+                        )
                     ) {
-                        items(state.tracks) { track ->
-                            TrackItem(
-                                track = track,
-                                onClick = { viewModel.playTrack(track) }
+                        // Greeting
+                        item {
+                            val greeting = getGreeting()
+                            Text(
+                                text = "$greeting, Alex",
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
                             )
+                        }
+
+                        // Recently Played
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text(
+                                text = "Recently Played",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(state.tracks.take(5)) { track ->
+                                    RecentlyPlayedCard(
+                                        track = track,
+                                        onClick = { viewModel.playTrack(track) }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Your Mixes
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Text(
+                                text = "Your Mixes",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                item {
+                                    MixCard(
+                                        title = "Chill",
+                                        subtitle = "Chill",
+                                        onClick = { /* TODO */ }
+                                    )
+                                }
+                                item {
+                                    MixCard(
+                                        title = "Focus",
+                                        subtitle = "Focus",
+                                        onClick = { /* TODO */ }
+                                    )
+                                }
+                                item {
+                                    MixCard(
+                                        title = "Workout",
+                                        subtitle = "Workout",
+                                        onClick = { /* TODO */ }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Trending Songs
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Text(
+                                text = "Trending Songs",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        itemsIndexed(state.tracks.take(10)) { index, track ->
+                            TrendingSongItem(
+                                position = index + 1,
+                                track = track,
+                                onClick = { viewModel.playTrack(track) },
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
@@ -112,7 +199,7 @@ fun HomeScreen(
             }
         }
 
-        // Now playing at bottom - outside Scaffold for proper positioning
+        // Now playing at bottom
         if (currentTrack != null) {
             NowPlayingBar(
                 track = currentTrack!!,
@@ -127,50 +214,142 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TrackItem(
+private fun RecentlyPlayedCard(
     track: Track,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassCard(
+    Column(
+        modifier = modifier
+            .width(160.dp)
+            .clickable(onClick = onClick)
+    ) {
+        AlbumArt(
+            artUrl = track.artUrl,
+            size = 160.dp,
+            cornerRadius = 12.dp
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = track.title,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = track.artistName,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun MixCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .width(160.dp)
+            .clickable(onClick = onClick)
+    ) {
+        // Placeholder card with gradient background
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .clip(RoundedCornerShape(12.dp)),
+            color = when (title) {
+                "Chill" -> MaterialTheme.colorScheme.primaryContainer
+                "Focus" -> MaterialTheme.colorScheme.secondaryContainer
+                "Workout" -> MaterialTheme.colorScheme.tertiaryContainer
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = when (title) {
+                        "Chill" -> MaterialTheme.colorScheme.onPrimaryContainer
+                        "Focus" -> MaterialTheme.colorScheme.onSecondaryContainer
+                        "Workout" -> MaterialTheme.colorScheme.onTertiaryContainer
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun TrendingSongItem(
+    position: Int,
+    track: Track,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Position number
+        Text(
+            text = position.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(24.dp)
+        )
+
+        // Album art
+        AlbumArt(
+            artUrl = track.artUrl,
+            size = 56.dp,
+            cornerRadius = 4.dp
+        )
+
+        // Track info
+        Column(
+            modifier = Modifier.weight(1f)
         ) {
-            AlbumArt(
-                artUrl = track.artUrl,
-                size = 56.dp,
-                cornerRadius = 4.dp
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "${track.artistName} • ${track.albumTitle}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = track.artistName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -190,75 +369,69 @@ private fun NowPlayingBar(
             .padding(16.dp),
         blurRadius = 32.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // "Now Playing" label
-            Text(
-                text = "Now Playing",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+            // Album art
+            AlbumArt(
+                artUrl = track.artworkUrl,
+                size = 56.dp,
+                cornerRadius = 8.dp
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Track info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Album art
-                AlbumArt(
-                    artUrl = track.artworkUrl,
-                    size = 64.dp,
-                    cornerRadius = 8.dp
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Track info
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable(onClick = onClick),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                Text(
+                    text = track.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-                    Text(
-                        text = "${track.artist} • ${track.album}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            // Play/Pause button
+            IconButton(onClick = onPlayPause) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
-                // Play/Pause button
-                IconButton(onClick = { onPlayPause() }) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Next button
-                IconButton(onClick = { onNext() }) {
-                    Icon(
-                        Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+            // Menu button
+            IconButton(onClick = { /* TODO: Show menu */ }) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
+    }
+}
+
+private fun getGreeting(): String {
+    return when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+        in 0..11 -> "Good morning"
+        in 12..17 -> "Good afternoon"
+        else -> "Good evening"
     }
 }
 
