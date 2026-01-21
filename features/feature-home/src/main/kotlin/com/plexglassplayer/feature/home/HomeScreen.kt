@@ -38,23 +38,34 @@ fun HomeScreen(
     val currentTrack by playbackManager.currentTrack.collectAsState()
     val isPlaying by playbackManager.isPlaying.collectAsState()
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Home") },
-                    actions = {
-                        IconButton(onClick = onSearchClick) {
-                            Icon(Icons.Default.Search, "Search")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Home") },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(Icons.Default.Search, "Search")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
-            },
-            modifier = Modifier.fillMaxSize()
-        ) { paddingValues ->
+            )
+        },
+        bottomBar = {
+            // Now playing bar at bottom
+            if (currentTrack != null) {
+                NowPlayingBar(
+                    track = currentTrack!!,
+                    isPlaying = isPlaying,
+                    onPlayPause = { playbackManager.playPause() },
+                    onNext = { playbackManager.playNext() },
+                    onClick = onNowPlayingClick
+                )
+            }
+        },
+        modifier = modifier.fillMaxSize()
+    ) { paddingValues ->
             when (val state = uiState) {
                 is HomeUiState.Loading -> {
                     Box(
@@ -72,7 +83,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = if (currentTrack != null) 120.dp else 16.dp
+                            bottom = paddingValues.calculateBottomPadding() + 16.dp
                         )
                     ) {
                         // Greeting
@@ -197,18 +208,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-
-        // Now playing at bottom
-        if (currentTrack != null) {
-            NowPlayingBar(
-                track = currentTrack!!,
-                isPlaying = isPlaying,
-                onPlayPause = { playbackManager.playPause() },
-                onNext = { playbackManager.playNext() },
-                onClick = onNowPlayingClick,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }
@@ -363,11 +362,10 @@ private fun NowPlayingBar(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        blurRadius = 32.dp
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 3.dp
     ) {
         Row(
             modifier = Modifier
