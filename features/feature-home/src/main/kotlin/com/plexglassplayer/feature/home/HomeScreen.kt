@@ -2,17 +2,22 @@ package com.plexglassplayer.feature.home
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.plexglassplayer.core.model.Playlist
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.ui.components.*
 import kotlinx.coroutines.delay
@@ -77,6 +83,7 @@ fun HomeScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState() // Refresh State
     val userName by viewModel.userName.collectAsState()
 
     val playbackManager = viewModel.playbackManager
@@ -86,6 +93,12 @@ fun HomeScreen(
     val context = LocalContext.current
 
     var currentPosition by remember { mutableLongStateOf(0L) }
+
+    // --- DIALOG STATES ---
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+    var playlistToDelete by remember { mutableStateOf<Playlist?>(null) }
+
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             currentPosition = playbackManager.getCurrentPosition()
@@ -152,140 +165,333 @@ fun HomeScreen(
                 }
             }
         ) { paddingValues ->
-            when (val state = uiState) {
-                is HomeUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = AccentMint)
+
+            // --- PULL TO REFRESH BOX ---
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.padding(paddingValues)
+            ) {
+                when (val state = uiState) {
+                    is HomeUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = AccentMint)
+                        }
                     }
-                }
-                is HomeUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = 0.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 24.dp
-                        )
-                    ) {
-                        // 1. HEADER
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Home",
-                                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = TextPrimary
-                                )
-                                IconButton(onClick = onSettingsClick) {
-                                    Icon(Icons.Default.Settings, "Settings", tint = TextPrimary)
-                                }
-                            }
-                        }
-
-                        // 2. GREETING
-                        item {
-                            val greeting = getGreeting()
-                            Text(
-                                text = "$greeting, $userName",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                                color = TextPrimary.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(start = 20.dp, bottom = 24.dp)
+                    is HomeUiState.Success -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                top = 0.dp,
+                                bottom = 24.dp
                             )
-                        }
-
-                        // 3. RECENTLY PLAYED
-                        item {
-                            Text(
-                                text = "Recently Played",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                color = TextSecondary,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                            )
-
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Uses recentTracks from the updated ViewModel state
-                                items(state.recentTracks) { track ->
-                                    RecentlyPlayedCard(
-                                        track = track,
-                                        onClick = { viewModel.playTrack(track) }
-                                    )
-                                }
-                            }
-                        }
-
-                        // 4. ALL MUSIC (Spacing Fixed)
-                        item {
-                            // No Spacer here to keep it tight to the section above
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    // Top padding 0.dp to minimize gap
-                                    .padding(start = 20.dp, end = 20.dp, top = 0.dp, bottom = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "All Music",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = TextSecondary
-                                )
-
-                                TextButton(onClick = onSeeAllMusicClick) {
+                        ) {
+                            // 1. HEADER (Fixed Spacing)
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 0.dp), // Reduced bottom padding
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
                                     Text(
-                                        text = "See all",
-                                        color = AccentMint,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                        text = "Home",
+                                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = TextPrimary
                                     )
+                                    IconButton(onClick = onSettingsClick) {
+                                        Icon(Icons.Default.Settings, "Settings", tint = TextPrimary)
+                                    }
                                 }
                             }
 
-                            // Random Shuffle of All Tracks
-                            val randomTracks = remember(state.allTracks) {
-                                state.allTracks.shuffled().take(10)
+                            // 2. GREETING (Fixed Spacing)
+                            item {
+                                Text(
+                                    text = "${getGreeting()}, $userName",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                                    color = TextPrimary.copy(alpha = 0.8f),
+                                    modifier = Modifier.padding(start = 20.dp, bottom = 24.dp) // Removed top padding
+                                )
                             }
 
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(randomTracks) { track ->
-                                    RecentlyPlayedCard(
-                                        track = track,
-                                        onClick = { viewModel.playTrack(track) }
+                            // 3. RECENTLY PLAYED
+                            item {
+                                Text(
+                                    text = "Recently Played",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                                )
+
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(state.recentTracks) { track ->
+                                        RecentlyPlayedCard(
+                                            track = track,
+                                            onClick = { viewModel.playTrack(track) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // 4. ALL MUSIC
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 20.dp, end = 20.dp, top = 0.dp, bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "All Music",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = TextSecondary
                                     )
+
+                                    TextButton(onClick = onSeeAllMusicClick) {
+                                        Text(
+                                            text = "See all",
+                                            color = AccentMint,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                }
+
+                                val randomTracks = remember(state.allTracks) {
+                                    state.allTracks.shuffled().take(10)
+                                }
+
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(randomTracks) { track ->
+                                        RecentlyPlayedCard(
+                                            track = track,
+                                            onClick = { viewModel.playTrack(track) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // 5. YOUR PLAYLISTS (With New Button & Long Press)
+                            item {
+                                Spacer(modifier = Modifier.height(32.dp))
+
+                                // Header Row
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Your Playlists",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
+                                        color = TextSecondary
+                                    )
+
+                                    // "New" Pill Button
+                                    Surface(
+                                        color = Color(0xFF1E1E1E),
+                                        shape = RoundedCornerShape(50),
+                                        border = BorderStroke(1.dp, Color.White.copy(0.1f)),
+                                        modifier = Modifier
+                                            .height(32.dp)
+                                            .clickable { showCreatePlaylistDialog = true }
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 12.dp)
+                                        ) {
+                                            Icon(Icons.Default.Add, null, tint = AccentMint, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("New", style = MaterialTheme.typography.labelMedium, color = TextPrimary)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (state.playlists.isEmpty()) {
+                                    Text(
+                                        "No playlists found",
+                                        modifier = Modifier.padding(horizontal = 20.dp),
+                                        color = TextSecondary.copy(0.5f)
+                                    )
+                                } else {
+                                    LazyRow(
+                                        contentPadding = PaddingValues(horizontal = 20.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        items(state.playlists) { playlist ->
+                                            MixCard(
+                                                title = playlist.title,
+                                                subtitle = "${playlist.trackCount} Songs",
+                                                onClick = { viewModel.openPlaylist(playlist) },
+                                                onLongClick = { playlistToDelete = playlist } // Triggers Delete Dialog
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
+                    is HomeUiState.Empty -> { /* Handle Empty */ }
+                    is HomeUiState.Error -> { /* Handle Error */ }
+                }
+            }
+        }
 
-                        // 5. YOUR MIXES
-                        item {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            SectionHeader(title = "Your Mixes")
-                            Spacer(modifier = Modifier.height(16.dp))
+        // --- CREATE PLAYLIST DIALOG ---
+        if (showCreatePlaylistDialog) {
+            AlertDialog(
+                onDismissRequest = { showCreatePlaylistDialog = false },
+                title = { Text("New Playlist") },
+                text = {
+                    OutlinedTextField(
+                        value = newPlaylistName,
+                        onValueChange = { newPlaylistName = it },
+                        label = { Text("Playlist Name") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentMint,
+                            focusedLabelColor = AccentMint,
+                            cursorColor = AccentMint
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (newPlaylistName.isNotBlank()) {
+                                viewModel.createPlaylist(newPlaylistName)
+                                showCreatePlaylistDialog = false
+                                newPlaylistName = ""
+                            }
+                        }
+                    ) { Text("Create", color = AccentMint) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCreatePlaylistDialog = false }) {
+                        Text("Cancel", color = TextSecondary)
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E),
+                textContentColor = TextSecondary,
+                titleContentColor = TextPrimary
+            )
+        }
 
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                item { MixCard(title = "Chill", subtitle = "Relaxing Beats", onClick = {}) }
-                                item { MixCard(title = "Favorites", subtitle = "Liked Songs", onClick = {}) }
-                                item { MixCard(title = "Gym", subtitle = "High Energy", onClick = {}) }
+        // --- DELETE PLAYLIST DIALOG ---
+        if (playlistToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { playlistToDelete = null },
+                title = { Text("Delete Playlist?", color = TextPrimary) },
+                text = {
+                    Text("Are you sure you want to delete '${playlistToDelete?.title}'?", color = TextSecondary)
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            playlistToDelete?.let { viewModel.deletePlaylist(it) }
+                            playlistToDelete = null
+                        }
+                    ) { Text("Delete", color = Color.Red) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { playlistToDelete = null }) {
+                        Text("Cancel", color = AccentMint)
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E),
+                titleContentColor = TextPrimary
+            )
+        }
+
+        // --- PLAYLIST BOTTOM SHEET ---
+        val state = uiState
+        if (state is HomeUiState.Success && state.selectedPlaylist != null) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.closePlaylistSheet() },
+                containerColor = Color(0xFF121212),
+                contentColor = TextPrimary
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 500.dp)
+                ) {
+                    Text(
+                        text = state.selectedPlaylist.title,
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(20.dp),
+                        color = AccentMint
+                    )
+
+                    if (state.selectedPlaylistTracks.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = AccentMint)
+                        }
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(bottom = 20.dp)
+                        ) {
+                            itemsIndexed(state.selectedPlaylistTracks) { index, track ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            viewModel.playFromPlaylist(index)
+                                        }
+                                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.DarkGray)
+                                    ) {
+                                        AsyncImage(
+                                            model = track.artUrl,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = track.title,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = track.artistName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                is HomeUiState.Empty -> { /* Handle Empty */ }
-                is HomeUiState.Error -> { /* Handle Error */ }
             }
         }
     }
@@ -349,9 +555,23 @@ private fun RecentlyPlayedCard(track: Track, onClick: () -> Unit) {
     }
 }
 
+// --- MIX CARD WITH LONG CLICK ---
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MixCard(title: String, subtitle: String, onClick: () -> Unit) {
-    Column(modifier = Modifier.width(140.dp).clickable(onClick = onClick)) {
+private fun MixCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+    ) {
         GlassSurface(
             shape = RoundedCornerShape(20.dp),
             gradient = CardGradient,
@@ -364,7 +584,11 @@ private fun MixCard(title: String, subtitle: String, onClick: () -> Unit) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = AccentMint
+                    color = AccentMint,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(8.dp)
                 )
             }
         }

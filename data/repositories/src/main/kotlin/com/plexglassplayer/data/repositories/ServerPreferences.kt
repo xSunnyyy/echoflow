@@ -42,6 +42,11 @@ class ServerPreferences @Inject constructor(
         return dataStore.data.first()[KEY_MUSIC_SECTION_KEY]
     }
 
+    // --- ADDED THIS FUNCTION ---
+    suspend fun getServerId(): String? {
+        return dataStore.data.first()[KEY_ACTIVE_SERVER_ID]
+    }
+
     suspend fun clearActiveServer() {
         dataStore.edit { prefs ->
             prefs.remove(KEY_ACTIVE_SERVER_ID)

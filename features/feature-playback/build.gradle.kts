@@ -33,6 +33,9 @@ dependencies {
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
 
+    // --- FIX: ADD THIS LINE ---
+    implementation(project(":data:repositories"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

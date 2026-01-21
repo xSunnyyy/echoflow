@@ -5,6 +5,8 @@ import android.media.AudioManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,17 +32,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.plexglassplayer.core.model.RepeatMode
 import com.plexglassplayer.core.util.formatDuration
+import com.plexglassplayer.feature.playback.NowPlayingViewModel
 import kotlinx.coroutines.delay
 
-// --- PALETTE ---
 private val TextPrimary = Color.White
 private val TextSecondary = Color.White.copy(alpha = 0.7f)
 private val TextTertiary = Color.White.copy(alpha = 0.5f)
 private val PlayButtonColor = Color(0xFF7CA0C0)
 private val ActiveIconColor = Color(0xFF7CA0C0)
+private val AccentMint = Color(0xFFB0F2E2)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +52,8 @@ fun NowPlayingScreen(
     onBackClick: () -> Unit,
     onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
-    playbackManager: PlaybackManager
+    playbackManager: PlaybackManager,
+    viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val currentTrack by playbackManager.currentTrack.collectAsState()
@@ -57,14 +62,21 @@ fun NowPlayingScreen(
     val shuffleEnabled by playbackManager.shuffleEnabled.collectAsState()
     val repeatMode by playbackManager.repeatMode.collectAsState()
 
+    // Playlist Data from ViewModel
+    val playlists by viewModel.playlists.collectAsState()
+
+    // Seekbar State
     var currentPosition by remember { mutableLongStateOf(0L) }
 
-    // --- VOLUME LOGIC ---
+    // Dialog States
+    var showPlaylistDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+
+    // Volume Logic
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat() }
-    var currentVolume by remember {
-        mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat())
-    }
+    var currentVolume by remember { mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()) }
 
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
@@ -103,17 +115,15 @@ fun NowPlayingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-            // Removed horizontal padding from parent Column to allow full-width control in children
         ) {
 
-            // --- 2. HEADER (MATCHED TO QUEUE SCREEN) ---
+            // --- 2. HEADER ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp), // Matched Padding
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Back Button (Matched Style: Circle Background)
                 IconButton(
                     onClick = onBackClick,
                     modifier = Modifier
@@ -129,7 +139,6 @@ fun NowPlayingScreen(
                     )
                 }
 
-                // Title (Matched Typography: Black weight, 2.sp spacing)
                 Text(
                     text = "NOW PLAYING",
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -139,22 +148,20 @@ fun NowPlayingScreen(
                     color = TextPrimary.copy(alpha = 0.9f)
                 )
 
-                // Queue Button (Plain, aligned end)
                 IconButton(
                     onClick = onQueueClick,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .size(44.dp) // Matched size for symmetry
+                        .size(44.dp)
                 ) {
                     Icon(Icons.Default.QueueMusic, contentDescription = "Queue", tint = TextPrimary)
                 }
             }
 
-            // Wrapper for remaining content to apply the standard horizontal padding
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 24.dp), // Restored padding for body content
+                    .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
@@ -186,7 +193,6 @@ fun NowPlayingScreen(
                     onSeek = { newPos -> playbackManager.seekTo(newPos) }
                 )
 
-                // Timestamps
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -252,6 +258,7 @@ fun NowPlayingScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Shuffle
                     IconButton(onClick = { playbackManager.toggleShuffle() }) {
                         Icon(
                             imageVector = Icons.Rounded.Shuffle,
@@ -260,10 +267,12 @@ fun NowPlayingScreen(
                         )
                     }
 
+                    // Previous
                     IconButton(onClick = { playbackManager.playPrevious() }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.SkipPrevious, "Prev", tint = TextPrimary, modifier = Modifier.size(32.dp))
                     }
 
+                    // Play/Pause
                     Box(
                         modifier = Modifier
                             .size(72.dp)
@@ -281,10 +290,12 @@ fun NowPlayingScreen(
                         )
                     }
 
+                    // Next
                     IconButton(onClick = { playbackManager.playNext() }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.SkipNext, "Next", tint = TextPrimary, modifier = Modifier.size(32.dp))
                     }
 
+                    // Repeat
                     IconButton(onClick = { playbackManager.toggleRepeatMode() }) {
                         val repeatIcon = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Rounded.Replay
                         val repeatTint = if (repeatMode != RepeatMode.OFF) ActiveIconColor else TextTertiary
@@ -294,7 +305,7 @@ fun NowPlayingScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // --- 7. VOLUME ---
+                // --- 7. VOLUME & ADD TO PLAYLIST ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -320,9 +331,132 @@ fun NowPlayingScreen(
                     )
 
                     Icon(Icons.AutoMirrored.Filled.VolumeUp, "Vol High", tint = TextTertiary, modifier = Modifier.size(20.dp))
+
+                    // NEW: Add to Playlist (Triggers Dialog)
+                    IconButton(onClick = { showPlaylistDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.AddCircleOutline,
+                            contentDescription = "Add to Playlist",
+                            tint = TextSecondary
+                        )
+                    }
                 }
             }
         }
+    }
+
+    // --- PLAYLIST SELECTION DIALOG ---
+    if (showPlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = { showPlaylistDialog = false },
+            title = { Text("Add to Playlist", color = TextPrimary) },
+            containerColor = Color(0xFF1E1E1E),
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    // Option to Create New
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showPlaylistDialog = false
+                                    showCreateDialog = true
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(40.dp).background(AccentMint.copy(0.1f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Add, null, tint = AccentMint)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Create New Playlist", color = AccentMint, fontWeight = FontWeight.Bold)
+                        }
+                        HorizontalDivider(color = Color.White.copy(0.1f))
+                    }
+
+                    if (playlists.isEmpty()) {
+                        item {
+                            Text(
+                                "No existing playlists.",
+                                color = TextSecondary,
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                        }
+                    }
+
+                    // List of Existing Playlists
+                    items(playlists) { playlist ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    currentTrack?.let { queueItem ->
+                                        viewModel.addToPlaylist(playlist, queueItem)
+                                    }
+                                    showPlaylistDialog = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.QueueMusic, null, tint = AccentMint, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(playlist.title, color = TextPrimary, fontWeight = FontWeight.Bold)
+                                Text("${playlist.trackCount} tracks", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPlaylistDialog = false }) {
+                    Text("Cancel", color = AccentMint)
+                }
+            }
+        )
+    }
+
+    // --- CREATE NEW PLAYLIST DIALOG ---
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = { Text("New Playlist", color = TextPrimary) },
+            containerColor = Color(0xFF1E1E1E),
+            text = {
+                OutlinedTextField(
+                    value = newPlaylistName,
+                    onValueChange = { newPlaylistName = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentMint,
+                        focusedLabelColor = AccentMint,
+                        cursorColor = AccentMint
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newPlaylistName.isNotBlank()) {
+                            currentTrack?.let { track ->
+                                viewModel.createPlaylist(newPlaylistName, track)
+                            }
+                            showCreateDialog = false
+                            newPlaylistName = ""
+                        }
+                    }
+                ) { Text("Create", color = AccentMint) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
     }
 }
 

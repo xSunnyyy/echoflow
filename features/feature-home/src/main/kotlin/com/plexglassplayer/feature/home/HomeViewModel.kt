@@ -2,6 +2,7 @@ package com.plexglassplayer.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.plexglassplayer.core.model.Playlist
 import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
 import com.plexglassplayer.data.repositories.LibraryRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -29,6 +31,10 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // --- NEW: Refresh State ---
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadTracks()
     }
@@ -40,24 +46,38 @@ class HomeViewModel @Inject constructor(
     fun loadTracks() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
+            fetchData()
+        }
+    }
 
-            // Fetch Recent and All Tracks in parallel
-            val recentDeferred = async { libraryRepository.getRecentTracks(limit = 10) }
-            val allDeferred = async { libraryRepository.getAllTracks(offset = 0, limit = 200) }
+    // --- NEW: Refresh Function (Keeps current UI while loading) ---
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            fetchData()
+            _isRefreshing.value = false
+        }
+    }
 
-            val recentResult = recentDeferred.await()
-            val allResult = allDeferred.await()
+    private suspend fun fetchData() {
+        val recentDeferred = viewModelScope.async { libraryRepository.getRecentTracks(limit = 10) }
+        val allDeferred = viewModelScope.async { libraryRepository.getAllTracks(offset = 0, limit = 500) }
+        val playlistsDeferred = viewModelScope.async { libraryRepository.getPlaylists() }
 
-            if (allResult is Result.Success && recentResult is Result.Success) {
-                _uiState.value = HomeUiState.Success(
-                    recentTracks = recentResult.data,
-                    allTracks = allResult.data
-                )
-            } else if (allResult is Result.Error) {
-                _uiState.value = HomeUiState.Error(allResult.exception.message ?: "Error")
-            } else {
-                _uiState.value = HomeUiState.Error("Unknown error")
-            }
+        val recentResult = recentDeferred.await()
+        val allResult = allDeferred.await()
+        val playlistsResult = playlistsDeferred.await()
+
+        if (allResult is Result.Success && recentResult is Result.Success && playlistsResult is Result.Success) {
+            _uiState.value = HomeUiState.Success(
+                recentTracks = recentResult.data,
+                allTracks = allResult.data,
+                playlists = playlistsResult.data
+            )
+        } else if (allResult is Result.Error) {
+            _uiState.value = HomeUiState.Error(allResult.exception.message ?: "Error")
+        } else {
+            _uiState.value = HomeUiState.Error("Unknown error")
         }
     }
 
@@ -66,26 +86,96 @@ class HomeViewModel @Inject constructor(
             try {
                 val state = _uiState.value
                 if (state is HomeUiState.Success) {
-                    // Play context depends on where the user clicked (Recent or All)
-                    // For simplicity, we just queue this specific track, or queue surrounding tracks
-                    // Here we just play the single track or find it in the 'all' list
-                    val queueItems = playbackRepository.convertTracksToQueue(listOf(track))
-                    playbackManager.playTracks(queueItems, 0)
-                    Timber.d("Started playback: ${track.title}")
+                    val allTracks = state.allTracks
+                    val indexInAll = allTracks.indexOfFirst { it.id == track.id }
+
+                    val (tracksToPlay, startIndex) = if (indexInAll != -1) {
+                        allTracks to indexInAll
+                    } else {
+                        (listOf(track) + allTracks) to 0
+                    }
+
+                    val queueItems = playbackRepository.convertTracksToQueue(tracksToPlay)
+                    playbackManager.playTracks(queueItems, startIndex)
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to start playback")
             }
         }
     }
+
+    fun openPlaylist(playlist: Playlist) {
+        viewModelScope.launch {
+            val result = libraryRepository.getPlaylistItems(playlist.id)
+            if (result is Result.Success) {
+                _uiState.update { currentState ->
+                    if (currentState is HomeUiState.Success) {
+                        currentState.copy(
+                            selectedPlaylist = playlist,
+                            selectedPlaylistTracks = result.data
+                        )
+                    } else currentState
+                }
+            }
+        }
+    }
+
+    fun closePlaylistSheet() {
+        _uiState.update { currentState ->
+            if (currentState is HomeUiState.Success) {
+                currentState.copy(selectedPlaylist = null, selectedPlaylistTracks = emptyList())
+            } else currentState
+        }
+    }
+
+    fun playFromPlaylist(index: Int) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            if (currentState is HomeUiState.Success && currentState.selectedPlaylistTracks.isNotEmpty()) {
+                val queueItems = playbackRepository.convertTracksToQueue(currentState.selectedPlaylistTracks)
+                playbackManager.playTracks(queueItems, index)
+            }
+        }
+    }
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            val allTracks = (_uiState.value as? HomeUiState.Success)?.allTracks
+            val firstTrack = allTracks?.firstOrNull()
+
+            if (firstTrack != null) {
+                libraryRepository.createPlaylist(name, firstTrack)
+                refresh() // Refresh list after create
+            }
+        }
+    }
+
+    fun deletePlaylist(playlist: Playlist) {
+        viewModelScope.launch {
+            try {
+                libraryRepository.deletePlaylist(playlist.id)
+                // Remove locally instantly for speed
+                _uiState.update { currentState ->
+                    if (currentState is HomeUiState.Success) {
+                        currentState.copy(playlists = currentState.playlists.filter { it.id != playlist.id })
+                    } else currentState
+                }
+                refresh() // Full sync
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to delete playlist")
+            }
+        }
+    }
 }
 
-// Updated State to hold both lists
 sealed class HomeUiState {
     data object Loading : HomeUiState()
     data class Success(
         val recentTracks: List<Track>,
-        val allTracks: List<Track>
+        val allTracks: List<Track>,
+        val playlists: List<Playlist>,
+        val selectedPlaylist: Playlist? = null,
+        val selectedPlaylistTracks: List<Track> = emptyList()
     ) : HomeUiState()
     data object Empty : HomeUiState()
     data class Error(val message: String) : HomeUiState()
