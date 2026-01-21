@@ -155,70 +155,75 @@ private fun NowPlayingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
-        )
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // "Now Playing" label
-            Text(
-                text = "Now Playing",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+        // "Now Playing" title above the card
+        Text(
+            text = "Now Playing",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            blurRadius = 40.dp
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onClick),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .clickable(onClick = onClick)
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Album artwork - compact on the left
+                // Large album artwork on the left
                 AlbumArt(
                     artUrl = track.artworkUrl,
-                    size = 80.dp,
-                    cornerRadius = 8.dp
+                    size = 160.dp,
+                    cornerRadius = 12.dp
                 )
 
-                // Track info and controls on the right
+                // All info and controls on the right
                 Column(
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(160.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Track title
-                    Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Track info at top
+                    Column {
+                        Text(
+                            text = track.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    // Artist name
-                    Text(
-                        text = track.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                        Text(
+                            text = track.album,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
 
-                    // Progress bar
+                        Text(
+                            text = track.artist,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Progress bar in middle
                     Slider(
                         value = if (duration > 0) (currentPosition.toFloat() / duration) else 0f,
                         onValueChange = { value ->
@@ -232,96 +237,84 @@ private fun NowPlayingCard(
                         )
                     )
 
-                    // Time labels
+                    // Controls at bottom
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = currentPosition.formatDuration(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = duration.formatDuration(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onPrevious,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.SkipPrevious,
+                                "Previous",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onToggleShuffle,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Shuffle,
+                                "Shuffle",
+                                tint = if (shuffleEnabled) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        FilledIconButton(
+                            onClick = onPlayPause,
+                            modifier = Modifier.size(44.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onToggleRepeat,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (repeatMode) {
+                                    RepeatMode.ONE -> Icons.Default.RepeatOne
+                                    else -> Icons.Default.Repeat
+                                },
+                                contentDescription = "Repeat",
+                                tint = when (repeatMode) {
+                                    RepeatMode.OFF -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    else -> MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onNext,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.SkipNext,
+                                "Next",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Playback controls row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Shuffle
-                IconButton(onClick = onToggleShuffle) {
-                    Icon(
-                        Icons.Default.Shuffle,
-                        "Shuffle",
-                        tint = if (shuffleEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Previous
-                IconButton(onClick = onPrevious) {
-                    Icon(
-                        Icons.Default.SkipPrevious,
-                        "Previous",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                // Play/Pause
-                FilledIconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(48.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                // Next
-                IconButton(onClick = onNext) {
-                    Icon(
-                        Icons.Default.SkipNext,
-                        "Next",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                // Repeat
-                IconButton(onClick = onToggleRepeat) {
-                    Icon(
-                        imageVector = when (repeatMode) {
-                            RepeatMode.ONE -> Icons.Default.RepeatOne
-                            else -> Icons.Default.Repeat
-                        },
-                        contentDescription = "Repeat",
-                        tint = when (repeatMode) {
-                            RepeatMode.OFF -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            else -> MaterialTheme.colorScheme.primary
-                        },
-                        modifier = Modifier.size(22.dp)
-                    )
                 }
             }
         }
