@@ -36,30 +36,33 @@ fun HomeScreen(
     val currentTrack by playbackManager.currentTrack.collectAsState()
     val isPlaying by playbackManager.isPlaying.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("All Tracks") },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("All Tracks") },
+                    actions = {
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(Icons.Default.Settings, "Settings")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
-        },
-        modifier = modifier
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { paddingValues ->
             when (val state = uiState) {
                 is HomeUiState.Loading -> {
-                    LoadingState(message = "Loading tracks...")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingState(message = "Loading tracks...")
+                    }
                 }
 
                 is HomeUiState.Success -> {
@@ -68,7 +71,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
-                            top = 16.dp,
+                            top = paddingValues.calculateTopPadding() + 16.dp,
                             bottom = if (currentTrack != null) 160.dp else 16.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -83,28 +86,42 @@ fun HomeScreen(
                 }
 
                 is HomeUiState.Empty -> {
-                    EmptyState(message = "No tracks found in your library")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyState(message = "No tracks found in your library")
+                    }
                 }
 
                 is HomeUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.loadTracks() }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ErrorState(
+                            message = state.message,
+                            onRetry = { viewModel.loadTracks() }
+                        )
+                    }
                 }
             }
+        }
 
-            // Now playing at bottom (outside the when block to ensure it's always on top)
-            if (currentTrack != null) {
-                NowPlayingBar(
-                    track = currentTrack!!,
-                    isPlaying = isPlaying,
-                    onPlayPause = { playbackManager.playPause() },
-                    onNext = { playbackManager.playNext() },
-                    onClick = onNowPlayingClick,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
-            }
+        // Now playing at bottom - outside Scaffold for proper positioning
+        if (currentTrack != null) {
+            NowPlayingBar(
+                track = currentTrack!!,
+                isPlaying = isPlaying,
+                onPlayPause = { playbackManager.playPause() },
+                onNext = { playbackManager.playNext() },
+                onClick = onNowPlayingClick,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
