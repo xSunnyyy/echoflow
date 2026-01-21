@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -11,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.plexglassplayer.core.model.QueueItem
@@ -153,87 +155,100 @@ private fun NowPlayingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassCard(
-        modifier = modifier.fillMaxWidth(),
-        blurRadius = 32.dp
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // "Now Playing" label
             Text(
                 text = "Now Playing",
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.Start)
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 12.dp)
             )
 
-            // Album artwork
+            // Album artwork - smaller and more compact
             AlbumArt(
                 artUrl = track.artworkUrl,
-                size = 200.dp,
+                size = 140.dp,
                 cornerRadius = 12.dp
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Track info
             Text(
                 text = track.title,
-                style = MaterialTheme.typography.headlineSmall,
-                maxLines = 2,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "${track.artist} • ${track.album}",
+                text = track.artist,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Progress bar
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Slider(
-                    value = if (duration > 0) (currentPosition.toFloat() / duration) else 0f,
-                    onValueChange = { value ->
-                        onSeek((value * duration).toLong())
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = currentPosition.formatDuration(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = duration.formatDuration(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Playback controls
+            // Progress bar - more compact
+            Slider(
+                value = if (duration > 0) (currentPosition.toFloat() / duration) else 0f,
+                onValueChange = { value ->
+                    onSeek((value * duration).toLong())
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = currentPosition.formatDuration(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = duration.formatDuration(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Playback controls - more compact
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -249,7 +264,7 @@ private fun NowPlayingCard(
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -259,14 +274,14 @@ private fun NowPlayingCard(
                         Icons.Default.SkipPrevious,
                         "Previous",
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
 
                 // Play/Pause
                 FilledIconButton(
                     onClick = onPlayPause,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(56.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -274,7 +289,7 @@ private fun NowPlayingCard(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
 
@@ -284,7 +299,7 @@ private fun NowPlayingCard(
                         Icons.Default.SkipNext,
                         "Next",
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
 
@@ -300,7 +315,7 @@ private fun NowPlayingCard(
                             RepeatMode.OFF -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                             else -> MaterialTheme.colorScheme.primary
                         },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -316,26 +331,32 @@ private fun UpcomingSongsCard(
     onRemoveClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassCard(
+    Card(
         modifier = modifier.fillMaxWidth(),
-        blurRadius = 32.dp
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(16.dp)
         ) {
             // "Upcoming Songs" label
             Text(
                 text = "Upcoming Songs",
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
             // List of upcoming tracks
             Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 tracks.forEachIndexed { relativeIndex, track ->
                     val absoluteIndex = startIndex + relativeIndex
@@ -363,23 +384,23 @@ private fun UpcomingTrackItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Position number
         Text(
             text = position.toString(),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(24.dp)
+            modifier = Modifier.width(20.dp)
         )
 
         // Album art
         AlbumArt(
             artUrl = track.artworkUrl,
-            size = 48.dp,
-            cornerRadius = 4.dp
+            size = 44.dp,
+            cornerRadius = 6.dp
         )
 
         // Track info
@@ -389,14 +410,14 @@ private fun UpcomingTrackItem(
         ) {
             Text(
                 text = track.title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "${track.artist} • ${track.album}",
+                text = track.artist,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -405,12 +426,15 @@ private fun UpcomingTrackItem(
         }
 
         // Remove button
-        IconButton(onClick = onRemoveClick) {
+        IconButton(
+            onClick = onRemoveClick,
+            modifier = Modifier.size(32.dp)
+        ) {
             Icon(
                 Icons.Default.Close,
                 contentDescription = "Remove from queue",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
