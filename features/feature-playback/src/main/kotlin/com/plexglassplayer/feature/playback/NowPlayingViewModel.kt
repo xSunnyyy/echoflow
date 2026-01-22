@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +29,7 @@ class NowPlayingViewModel @Inject constructor(
 
     private fun loadPlaylists() {
         viewModelScope.launch {
+            // Using 'if' here is fine because we only care about Success
             val result = libraryRepository.getPlaylists()
             if (result is Result.Success) {
                 _playlists.value = result.data
@@ -37,6 +39,8 @@ class NowPlayingViewModel @Inject constructor(
 
     fun addToPlaylist(playlist: Playlist, queueItem: QueueItem) {
         viewModelScope.launch {
+            Timber.d("Adding track to playlist: trackId=${queueItem.trackId}, playlistId=${playlist.id}")
+
             val track = Track(
                 id = queueItem.trackId,
                 title = queueItem.title,
@@ -47,11 +51,25 @@ class NowPlayingViewModel @Inject constructor(
                 artUrl = queueItem.artworkUrl,
                 streamKey = ""
             )
-            libraryRepository.addToPlaylist(playlist.id, track)
+
+            val result = libraryRepository.addToPlaylist(playlist.id, track)
+
+            // FIX: Added 'else' branch to handle other states (like Loading)
+            when (result) {
+                is Result.Success -> {
+                    Timber.d("Successfully added track to playlist")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "Failed to add track to playlist")
+                }
+                else -> {
+                    // Handle Loading or other states if necessary
+                }
+            }
         }
     }
 
-    // --- NEW: Create Playlist ---
+    // --- Create Playlist ---
     fun createPlaylist(name: String, queueItem: QueueItem) {
         viewModelScope.launch {
             val track = Track(
@@ -65,7 +83,7 @@ class NowPlayingViewModel @Inject constructor(
                 streamKey = ""
             )
             libraryRepository.createPlaylist(name, track)
-            loadPlaylists() // Refresh
+            loadPlaylists() // Refresh the playlist list
         }
     }
 }

@@ -17,19 +17,26 @@ class LibraryRepository @Inject constructor(
     private val serverPreferences: ServerPreferences
 ) {
 
+    // Helper to safely combine a base URL and a path
+    private fun sanitizeUrl(baseUrl: String, path: String): String {
+        val cleanBase = baseUrl.trimEnd('/')
+        val cleanPath = if (path.startsWith("/")) path else "/$path"
+        return "$cleanBase$cleanPath"
+    }
+
     private fun getAbsoluteUrl(path: String?, baseUrl: String, token: String): String? {
         if (path.isNullOrEmpty()) return null
         if (path.startsWith("http")) return path
-        val cleanBase = baseUrl.trimEnd('/')
-        val cleanPath = if (path.startsWith("/")) path else "/$path"
-        return "$cleanBase$cleanPath?X-Plex-Token=$token"
+        val url = sanitizeUrl(baseUrl, path)
+        return "$url?X-Plex-Token=$token"
     }
 
     suspend fun getRecentTracks(limit: Int = 10): Result<List<Track>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val sectionKey = serverPreferences.getMusicSectionKey() ?: throw IllegalStateException("No music section")
-        val url = "$baseUrl/library/sections/$sectionKey/all?type=10&sort=lastViewedAt:desc"
+
+        val url = sanitizeUrl(baseUrl, "library/sections/$sectionKey/all?type=10&sort=lastViewedAt:desc")
         val response = apiService.getTracks(url, token, 0, limit)
         response.container.metadata.map { dto ->
             val track = dto.toModel()
@@ -41,7 +48,8 @@ class LibraryRepository @Inject constructor(
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val sectionKey = serverPreferences.getMusicSectionKey() ?: throw IllegalStateException("No music section")
-        val url = "$baseUrl/library/sections/$sectionKey/all"
+
+        val url = sanitizeUrl(baseUrl, "library/sections/$sectionKey/all")
         val response = apiService.getArtists(url, token, offset, limit)
         response.container.metadata.map { dto ->
             val artist = dto.toModel()
@@ -56,7 +64,10 @@ class LibraryRepository @Inject constructor(
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val sectionKey = serverPreferences.getMusicSectionKey() ?: throw IllegalStateException("No music section")
-        val url = if (artistId != null) "$baseUrl/library/metadata/$artistId/children" else "$baseUrl/library/sections/$sectionKey/albums"
+
+        val path = if (artistId != null) "library/metadata/$artistId/children" else "library/sections/$sectionKey/albums"
+        val url = sanitizeUrl(baseUrl, path)
+
         val response = apiService.getAlbums(url, token, offset, limit)
         response.container.metadata.map { dto ->
             val album = dto.toModel()
@@ -67,7 +78,8 @@ class LibraryRepository @Inject constructor(
     suspend fun getTracks(albumId: String, offset: Int = 0, limit: Int = 50): Result<List<Track>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/library/metadata/$albumId/children"
+
+        val url = sanitizeUrl(baseUrl, "library/metadata/$albumId/children")
         val response = apiService.getTracks(url, token, offset, limit)
         response.container.metadata.map { dto ->
             val track = dto.toModel()
@@ -79,7 +91,8 @@ class LibraryRepository @Inject constructor(
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val sectionKey = serverPreferences.getMusicSectionKey() ?: throw IllegalStateException("No music section")
-        val url = "$baseUrl/library/sections/$sectionKey/all?type=10"
+
+        val url = sanitizeUrl(baseUrl, "library/sections/$sectionKey/all?type=10")
         val response = apiService.getTracks(url, token, offset, limit)
         response.container.metadata.map { dto ->
             val track = dto.toModel()
@@ -90,7 +103,8 @@ class LibraryRepository @Inject constructor(
     suspend fun getPlaylists(): Result<List<Playlist>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/playlists"
+
+        val url = sanitizeUrl(baseUrl, "playlists")
         val response = apiService.getPlaylists(url, token)
         response.container.metadata.map { dto ->
             val playlist = dto.toModel()
@@ -101,14 +115,15 @@ class LibraryRepository @Inject constructor(
     suspend fun getPlaylistItems(playlistId: String, offset: Int = 0, limit: Int = 500): Result<List<Track>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/playlists/$playlistId/items"
+
+        val url = sanitizeUrl(baseUrl, "playlists/$playlistId/items")
         val response = apiService.getTracks(url, token, offset, limit)
 
         response.container.metadata.map { dto ->
             val track = dto.toModel()
-            // Store the playlist item ID separately to preserve the actual track ID
+            // Map the playlist Item ID (dto.id) so deletion works
             track.copy(
-                playlistItemId = dto.id?.toString(),
+                playlistItemId = dto.playlistItemId ?: dto.id?.toString(),
                 artUrl = getAbsoluteUrl(track.artUrl, baseUrl, token)
             )
         }
@@ -117,7 +132,8 @@ class LibraryRepository @Inject constructor(
     suspend fun search(query: String, offset: Int = 0, limit: Int = 50): Result<List<Track>> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/search"
+
+        val url = sanitizeUrl(baseUrl, "search")
         val response = apiService.search(url, query, token, offset, limit)
         response.container.metadata.map { dto ->
             val track = dto.toModel()
@@ -125,14 +141,14 @@ class LibraryRepository @Inject constructor(
         }
     }
 
-    // --- Helper to get Server ID ---
+    // --- HELPER to get URI and fix missing Server ID ---
     private suspend fun getTrackUri(trackId: String, token: String, baseUrl: String): String {
         var machineId = serverPreferences.getServerId()
 
         if (machineId.isNullOrEmpty()) {
             try {
                 // Fetch identity if missing
-                val identityUrl = "$baseUrl/identity"
+                val identityUrl = sanitizeUrl(baseUrl, "identity")
                 val identity = apiService.getIdentity(identityUrl, token)
                 machineId = identity.container.machineIdentifier
                 if (machineId != null) {
@@ -155,8 +171,9 @@ class LibraryRepository @Inject constructor(
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
 
         val uri = getTrackUri(track.id, token, baseUrl)
-        val url = "$baseUrl/playlists/$playlistId/items"
+        val url = sanitizeUrl(baseUrl, "playlists/$playlistId/items")
 
+        Timber.d("Adding to playlist: URL=$url, URI=$uri")
         apiService.addToPlaylist(url, uri, token)
     }
 
@@ -165,22 +182,28 @@ class LibraryRepository @Inject constructor(
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
 
         val uri = getTrackUri(firstTrack.id, token, baseUrl)
-        val url = "$baseUrl/playlists"
+        val url = sanitizeUrl(baseUrl, "playlists")
 
+        Timber.d("Creating playlist '$title' with URI=$uri")
         apiService.createPlaylist(url = url, title = title, uri = uri, token = token)
     }
 
     suspend fun deletePlaylist(playlistId: String): Result<Unit> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/playlists/$playlistId"
+
+        val url = sanitizeUrl(baseUrl, "playlists/$playlistId")
         apiService.deletePlaylist(url, token)
     }
 
     suspend fun removeTrackFromPlaylist(playlistId: String, playlistItemId: String): Result<Unit> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val url = "$baseUrl/playlists/$playlistId/items/$playlistItemId"
+
+        // FIX: Ensure no double slashes
+        val url = sanitizeUrl(baseUrl, "playlists/$playlistId/items/$playlistItemId")
+
+        Timber.d("Removing track from playlist: $url")
         apiService.removeFromPlaylist(url, token)
     }
 }
