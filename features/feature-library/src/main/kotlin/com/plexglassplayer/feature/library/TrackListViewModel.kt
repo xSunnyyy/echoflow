@@ -17,6 +17,14 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+// Defined at top to resolve unresolved reference errors
+sealed class TrackListUiState {
+    data object Loading : TrackListUiState()
+    data class Success(val tracks: List<Track>) : TrackListUiState()
+    data object Empty : TrackListUiState()
+    data class Error(val message: String) : TrackListUiState()
+}
+
 @HiltViewModel
 class TrackListViewModel @Inject constructor(
     private val getTracksUseCase: GetTracksUseCase,
@@ -26,8 +34,6 @@ class TrackListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // FIX: Changed from String to String? and removed the 'throw'
-    // Now it won't crash if 'albumId' is missing (like in "All Music" mode)
     private val albumId: String? = savedStateHandle["albumId"]
 
     private val _uiState = MutableStateFlow<TrackListUiState>(TrackListUiState.Loading)
@@ -41,11 +47,14 @@ class TrackListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = TrackListUiState.Loading
 
-            // FIX: We pass the nullable albumId.
-            // Ensure your GetTracksUseCase.invoke parameter is also nullable (String?)
             when (val result = getTracksUseCase(albumId = albumId)) {
                 is Result.Success -> {
-                    val tracks = result.data
+                    val tracks = if (albumId == null) {
+                        result.data.sortedBy { it.title.lowercase() }
+                    } else {
+                        result.data
+                    }
+
                     if (tracks.isEmpty()) {
                         _uiState.value = TrackListUiState.Empty
                     } else {
@@ -68,10 +77,10 @@ class TrackListViewModel @Inject constructor(
             try {
                 val state = _uiState.value
                 if (state is TrackListUiState.Success) {
+                    // This creates a queue from the current visible list (could be one artist)
                     val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
                     val startIndex = state.tracks.indexOfFirst { it.id == track.id }
                     playbackManager.playTracks(queueItems, if (startIndex != -1) startIndex else 0)
-                    Timber.d("Started playback: ${track.title}")
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to start playback")
@@ -86,7 +95,6 @@ class TrackListViewModel @Inject constructor(
                 if (state is TrackListUiState.Success) {
                     val queueItems = playbackRepository.convertTracksToQueue(state.tracks)
                     playbackManager.playTracks(queueItems, 0)
-                    Timber.d("Playing all ${state.tracks.size} tracks")
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to play all tracks")
@@ -94,35 +102,29 @@ class TrackListViewModel @Inject constructor(
         }
     }
 
-    fun downloadTrack(track: Track) {
-        viewModelScope.launch {
-            try {
-                downloadManager.downloadTrack(track)
-                Timber.d("Started download: ${track.title}")
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to start download")
-            }
-        }
-    }
-
-    fun downloadAll() {
+    // --- FIX: TRUE GLOBAL SHUFFLE ---
+    fun shuffleAll() {
         viewModelScope.launch {
             try {
                 val state = _uiState.value
                 if (state is TrackListUiState.Success) {
-                    downloadManager.downloadTracks(state.tracks)
-                    Timber.d("Started downloading ${state.tracks.size} tracks")
+                    // 1. Manually shuffle the entire list provided by the UseCase
+                    // If albumId is null, this is your entire library
+                    val tracks = state.tracks.shuffled()
+
+                    // 2. Convert the full, randomized library into QueueItems
+                    val queueItems = playbackRepository.convertTracksToQueue(tracks)
+
+                    // 3. Play from the start of this new global randomized queue
+                    playbackManager.playTracks(queueItems, 0)
+
+                    // 4. Ensure internal shuffle mode is off to prevent ExoPlayer
+                    // from recalculating a new (possibly biased) shuffle path
+                    playbackManager.setShuffleEnabled(false)
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to download all tracks")
+                Timber.e(e, "Failed to shuffle tracks")
             }
         }
     }
-}
-
-sealed class TrackListUiState {
-    data object Loading : TrackListUiState()
-    data class Success(val tracks: List<Track>) : TrackListUiState()
-    data object Empty : TrackListUiState()
-    data class Error(val message: String) : TrackListUiState()
 }

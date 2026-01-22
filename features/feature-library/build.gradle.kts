@@ -19,21 +19,25 @@ android {
 }
 
 dependencies {
+    // Core Modules
     implementation(project(":core:core-ui"))
     implementation(project(":core:core-model"))
     implementation(project(":core:core-util"))
     implementation(project(":domain"))
-    
-    // Required to resolve PlaybackRepository and DownloadManager
+
+    // Feature & Data Dependencies
     implementation(project(":data:repositories"))
-    // Required to resolve PlaybackManager
     implementation(project(":features:feature-playback"))
 
-    // Fixes unresolved reference 'timber'
+    // --- CRITICAL FIX: Image Loading ---
+    // This resolves the "Unresolved reference: AsyncImage" error
+    implementation(libs.coil.compose)
+
+    // UI & Icons
     implementation(libs.timber)
-    // Fixes unresolved reference 'Download' (Icons.Default.Download)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Compose & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -41,6 +45,8 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
+
+    // Dependency Injection
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)

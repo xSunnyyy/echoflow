@@ -77,7 +77,6 @@ fun QueueScreen(
     val currentTrack by playbackManager.currentTrack.collectAsState()
     val isPlaying by playbackManager.isPlaying.collectAsState()
     val shuffleEnabled by playbackManager.shuffleEnabled.collectAsState()
-    val repeatMode by playbackManager.repeatMode.collectAsState()
     val duration by playbackManager.duration.collectAsState()
 
     var currentPosition by remember { mutableLongStateOf(0L) }
@@ -89,9 +88,7 @@ fun QueueScreen(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         // --- BACKGROUND ---
         if (currentTrack != null) {
             Crossfade(targetState = currentTrack!!.artworkUrl, label = "BackgroundFade") { artworkUrl ->
@@ -109,19 +106,13 @@ fun QueueScreen(
         Box(modifier = Modifier.fillMaxSize().background(BackgroundScrim))
 
         // --- CONTENT ---
-        Column(
-            modifier = Modifier.fillMaxSize()
-            // REMOVED: .statusBarsPadding() <- This was likely causing the double padding
-        ) {
-            // Replaced with a manual spacer.
-            // If the UI is now too high (behind status bar), increase this to 32.dp or 40.dp
+        Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // 1. TOP BAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // Reduced vertical padding here as well
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -131,14 +122,26 @@ fun QueueScreen(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary, modifier = Modifier.size(22.dp))
                 }
+
                 Spacer(modifier = Modifier.weight(1f))
+
                 Text(
                     text = "NOW PLAYING",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
                     color = TextPrimary.copy(alpha = 0.9f)
                 )
+
                 Spacer(modifier = Modifier.weight(1f))
-                Spacer(modifier = Modifier.size(44.dp))
+
+                // TOP BAR SHUFFLE TOGGLE
+                IconButton(onClick = { playbackManager.toggleShuffle() }) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        null,
+                        tint = if (shuffleEnabled) AccentMint else TextPrimary.copy(alpha = 0.4f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // 2. NOW PLAYING CARD
@@ -150,8 +153,18 @@ fun QueueScreen(
                         duration = duration,
                         currentPosition = currentPosition,
                         onPlayPause = { playbackManager.playPause() },
-                        onNext = { playbackManager.playNext() },
-                        onPrevious = { playbackManager.playPrevious() },
+                        // FIX: When Shuffle is ON, we use the player's internal playNext() for true randomness.
+                        // When Shuffle is OFF, we use manual index navigation to stay in order.
+                        onNext = {
+                            if (shuffleEnabled) {
+                                playbackManager.playNext()
+                            } else if (currentIndex < queue.size - 1) {
+                                playbackManager.playFromQueue(currentIndex + 1)
+                            }
+                        },
+                        onPrevious = {
+                            playbackManager.playPrevious()
+                        },
                         onSeek = { playbackManager.seekTo(it) },
                         onClick = onNowPlayingClick
                     )
@@ -160,8 +173,15 @@ fun QueueScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. UP NEXT CARD
-            val upcomingTracks = queue.drop(currentIndex + 1)
+            // 3. UP NEXT CARD (Dynamic "Alive" View)
+            // If Shuffle is active, we show a randomized preview of the entire library queue
+            val upcomingTracks = remember(queue, currentIndex, shuffleEnabled) {
+                if (shuffleEnabled) {
+                    queue.filterIndexed { index, _ -> index != currentIndex }.shuffled()
+                } else {
+                    queue.drop(currentIndex + 1)
+                }
+            }
 
             Box(
                 modifier = Modifier

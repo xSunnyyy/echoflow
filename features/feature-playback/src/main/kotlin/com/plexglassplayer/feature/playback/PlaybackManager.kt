@@ -93,13 +93,11 @@ class PlaybackManager @Inject constructor(
                 updateCurrentTrack()
             }
 
-            // FIX: Listen for Shuffle changes to update UI state
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                 _shuffleEnabled.value = shuffleModeEnabled
                 Timber.d("Shuffle mode changed: $shuffleModeEnabled")
             }
 
-            // FIX: Listen for Repeat changes and map to our Enum
             override fun onRepeatModeChanged(repeatMode: Int) {
                 val mode = when (repeatMode) {
                     Player.REPEAT_MODE_OFF -> RepeatMode.OFF
@@ -119,10 +117,6 @@ class PlaybackManager @Inject constructor(
             _currentTrack.value = _queue.value[currentMediaIndex]
             _currentIndex.value = currentMediaIndex
         }
-    }
-
-    fun playTrack(track: QueueItem) {
-        playTracks(listOf(track), 0)
     }
 
     fun playTracks(tracks: List<QueueItem>, startIndex: Int = 0) {
@@ -154,19 +148,11 @@ class PlaybackManager @Inject constructor(
         updateCurrentTrack()
     }
 
-    fun play() {
-        mediaController?.play()
-    }
-
-    fun pause() {
-        mediaController?.pause()
-    }
-
     fun playPause() {
         if (_isPlaying.value) {
-            pause()
+            mediaController?.pause()
         } else {
-            play()
+            mediaController?.play()
         }
     }
 
@@ -182,7 +168,6 @@ class PlaybackManager @Inject constructor(
         mediaController?.seekTo(positionMs)
     }
 
-    // FIX: Method name now matches the enum type for better consistency
     fun setRepeatMode(repeatMode: RepeatMode) {
         _repeatMode.value = repeatMode
         val playerRepeatMode = when (repeatMode) {
@@ -193,7 +178,6 @@ class PlaybackManager @Inject constructor(
         mediaController?.repeatMode = playerRepeatMode
     }
 
-    // FIX: Matched to NowPlayingScreen call
     fun toggleRepeatMode() {
         val newMode = when (_repeatMode.value) {
             RepeatMode.OFF -> RepeatMode.ALL
@@ -203,58 +187,40 @@ class PlaybackManager @Inject constructor(
         setRepeatMode(newMode)
     }
 
-    fun setShuffle(enabled: Boolean) {
+    fun setShuffleEnabled(enabled: Boolean) {
         _shuffleEnabled.value = enabled
         mediaController?.shuffleModeEnabled = enabled
     }
 
-    // FIX: Matched to NowPlayingScreen call
     fun toggleShuffle() {
-        setShuffle(!_shuffleEnabled.value)
+        setShuffleEnabled(!_shuffleEnabled.value)
     }
 
     fun getCurrentPosition(): Long {
         return mediaController?.currentPosition ?: 0L
     }
 
+    // --- RESTORED: Needed for HomeScreen Playlist Bottom Sheet ---
     fun playFromQueue(index: Int) {
         if (index >= 0 && index < _queue.value.size) {
             mediaController?.seekToDefaultPosition(index)
-            play()
+            mediaController?.play()
         }
     }
 
+    // --- RESTORED: Needed for HomeScreen Playlist Bottom Sheet ---
     fun removeFromQueue(index: Int) {
-        if (index >= 0 && index < _queue.value.size && index != _currentIndex.value) {
-            val newQueue = _queue.value.toMutableList()
-            newQueue.removeAt(index)
-            _queue.value = newQueue
+        val currentQueue = _queue.value.toMutableList()
+        val currentMediaItemIndex = mediaController?.currentMediaItemIndex ?: -1
 
-            val mediaItems = newQueue.map { track ->
-                MediaItem.Builder()
-                    .setUri(track.uri)
-                    .setMediaId(track.trackId)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(track.title)
-                            .setArtist(track.artist)
-                            .setAlbumTitle(track.album)
-                            .setArtworkUri(track.artworkUrl?.let { android.net.Uri.parse(it) })
-                            .build()
-                    )
-                    .build()
-            }
+        if (index >= 0 && index < currentQueue.size && index != currentMediaItemIndex) {
+            currentQueue.removeAt(index)
+            _queue.value = currentQueue
 
-            val currentPos = getCurrentPosition()
-            val currentIdx = _currentIndex.value
+            // Remove from MediaController to keep player state in sync
+            mediaController?.removeMediaItem(index)
 
-            mediaController?.apply {
-                setMediaItems(mediaItems, if (index < currentIdx) currentIdx - 1 else currentIdx, currentPos)
-            }
-
-            if (index < currentIdx) {
-                _currentIndex.value = currentIdx - 1
-            }
+            Timber.d("Removed item at index $index from queue")
         }
     }
 
@@ -264,27 +230,6 @@ class PlaybackManager @Inject constructor(
         _queue.value = emptyList()
         _currentTrack.value = null
         _currentIndex.value = 0
-    }
-
-    fun addToQueue(track: QueueItem) {
-        val newQueue = _queue.value.toMutableList()
-        newQueue.add(track)
-        _queue.value = newQueue
-
-        val mediaItem = MediaItem.Builder()
-            .setUri(track.uri)
-            .setMediaId(track.trackId)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(track.title)
-                    .setArtist(track.artist)
-                    .setAlbumTitle(track.album)
-                    .setArtworkUri(track.artworkUrl?.let { android.net.Uri.parse(it) })
-                    .build()
-            )
-            .build()
-
-        mediaController?.addMediaItem(mediaItem)
     }
 
     fun release() {

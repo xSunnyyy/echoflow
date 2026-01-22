@@ -43,7 +43,7 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Hide mini-player on specific screens
+    // Mini-player is hidden on screens with specific player layouts or auth flows
     val hideMiniPlayer = currentRoute == Screen.NowPlaying.route
             || currentRoute == Screen.Auth.route
             || currentRoute == Screen.ServerSelection.route
@@ -63,7 +63,7 @@ fun AppNavigation(
             startDestination = startDestination,
             modifier = Modifier.padding(bottom = miniPlayerHeight)
         ) {
-            // Auth flow
+            // --- AUTH & SERVER ---
             composable(Screen.Auth.route) {
                 AuthScreen(
                     onAuthSuccess = {
@@ -84,8 +84,9 @@ fun AppNavigation(
                 )
             }
 
-            // Home
+            // --- HOME ---
             composable(Screen.Home.route) {
+                // Parameters aligned with latest minimalist HomeScreen signature
                 HomeScreen(
                     onLibraryClick = { navController.navigate(Screen.ArtistList.route) },
                     onSeeAllMusicClick = { navController.navigate(Screen.AllMusic.route) },
@@ -96,14 +97,11 @@ fun AppNavigation(
                 )
             }
 
-            // All Music
+            // --- LIBRARY ---
             composable(Screen.AllMusic.route) {
-                TrackListScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+                TrackListScreen(onBackClick = { navController.popBackStack() })
             }
 
-            // Library - Artists
             composable(Screen.ArtistList.route) {
                 ArtistListScreen(
                     onArtistClick = { artist ->
@@ -112,7 +110,6 @@ fun AppNavigation(
                 )
             }
 
-            // Library - Albums
             composable(
                 route = Screen.AlbumList.route,
                 arguments = listOf(navArgument("artistId") { type = NavType.StringType })
@@ -125,49 +122,40 @@ fun AppNavigation(
                 )
             }
 
-            // Library - Tracks
             composable(
                 route = Screen.TrackList.route,
                 arguments = listOf(navArgument("albumId") { type = NavType.StringType })
             ) {
-                TrackListScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+                TrackListScreen(onBackClick = { navController.popBackStack() })
             }
 
-            // Search
+            // --- SEARCH ---
             composable(Screen.Search.route) {
                 SearchScreen()
             }
 
-            // Now Playing
+            // --- PLAYBACK ---
             composable(Screen.NowPlaying.route) {
+                // FIXED: Removed playbackManager and added onQueueClick
                 NowPlayingScreen(
                     onBackClick = { navController.popBackStack() },
-                    // FIX: Wired up the Queue click
                     onQueueClick = { navController.navigate(Screen.Queue.route) }
                 )
             }
 
-            // Queue
             composable(Screen.Queue.route) {
                 com.plexglassplayer.feature.playback.QueueScreen(
                     playbackManager = playbackManager,
                     onBackClick = { navController.popBackStack() },
-                    onNowPlayingClick = {
-                        navController.navigate(Screen.NowPlaying.route)
-                    }
+                    onNowPlayingClick = { navController.navigate(Screen.NowPlaying.route) }
                 )
             }
 
-            // Downloads
+            // --- SYSTEM ---
             composable(Screen.Downloads.route) {
-                DownloadsScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+                DownloadsScreen(onBackClick = { navController.popBackStack() })
             }
 
-            // Settings
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     onBackClick = { navController.popBackStack() },
@@ -190,14 +178,12 @@ fun AppNavigation(
     }
 }
 
-// ViewModel
 @dagger.hilt.android.lifecycle.HiltViewModel
 class AppNavigationViewModel @javax.inject.Inject constructor(
     val authRepository: AuthRepository,
     val playbackManager: PlaybackManager
 ) : androidx.lifecycle.ViewModel()
 
-// Screen destinations
 sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
     data object ServerSelection : Screen("serverSelection")
