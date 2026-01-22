@@ -3,7 +3,6 @@ package com.plexglassplayer.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,15 +29,12 @@ import com.plexglassplayer.feature.playback.PlaybackManager
 import com.plexglassplayer.feature.search.SearchScreen
 import com.plexglassplayer.feature.server.ServerSelectionScreen
 import com.plexglassplayer.feature.settings.SettingsScreen
-import javax.inject.Inject
 
 @Composable
 fun AppNavigation(
     modifier: Modifier = Modifier,
-    // FIX: Inject the ViewModel here as a default parameter
     viewModel: AppNavigationViewModel = hiltViewModel()
 ) {
-    // FIX: Access dependencies from the ViewModel inside the function
     val authRepository = viewModel.authRepository
     val playbackManager = viewModel.playbackManager
 
@@ -100,7 +96,7 @@ fun AppNavigation(
                 )
             }
 
-            // All Music (Reusing TrackListScreen)
+            // All Music
             composable(Screen.AllMusic.route) {
                 TrackListScreen(
                     onBackClick = { navController.popBackStack() }
@@ -129,7 +125,7 @@ fun AppNavigation(
                 )
             }
 
-            // Library - Tracks (Specific Album)
+            // Library - Tracks
             composable(
                 route = Screen.TrackList.route,
                 arguments = listOf(navArgument("albumId") { type = NavType.StringType })
@@ -148,8 +144,8 @@ fun AppNavigation(
             composable(Screen.NowPlaying.route) {
                 NowPlayingScreen(
                     onBackClick = { navController.popBackStack() },
-                    onQueueClick = { navController.navigate(Screen.Queue.route) },
-                    playbackManager = playbackManager
+                    // FIX: Wired up the Queue click
+                    onQueueClick = { navController.navigate(Screen.Queue.route) }
                 )
             }
 

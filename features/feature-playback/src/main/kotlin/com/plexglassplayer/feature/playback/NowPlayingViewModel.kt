@@ -12,11 +12,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class NowPlayingViewModel @Inject constructor(
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    // FIX: Inject PlaybackManager and expose it as a property
+    val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
@@ -37,6 +40,8 @@ class NowPlayingViewModel @Inject constructor(
 
     fun addToPlaylist(playlist: Playlist, queueItem: QueueItem) {
         viewModelScope.launch {
+            Timber.d("Adding track to playlist: trackId=${queueItem.trackId}, playlistId=${playlist.id}")
+
             val track = Track(
                 id = queueItem.trackId,
                 title = queueItem.title,
@@ -47,11 +52,21 @@ class NowPlayingViewModel @Inject constructor(
                 artUrl = queueItem.artworkUrl,
                 streamKey = ""
             )
-            libraryRepository.addToPlaylist(playlist.id, track)
+
+            val result = libraryRepository.addToPlaylist(playlist.id, track)
+
+            when (result) {
+                is Result.Success -> {
+                    Timber.d("Successfully added track to playlist")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "Failed to add track to playlist")
+                }
+                else -> {}
+            }
         }
     }
 
-    // --- NEW: Create Playlist ---
     fun createPlaylist(name: String, queueItem: QueueItem) {
         viewModelScope.launch {
             val track = Track(
@@ -65,7 +80,7 @@ class NowPlayingViewModel @Inject constructor(
                 streamKey = ""
             )
             libraryRepository.createPlaylist(name, track)
-            loadPlaylists() // Refresh
+            loadPlaylists()
         }
     }
 }

@@ -8,9 +8,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // This includes getValue and setValue
-import androidx.compose.runtime.getValue // Explicitly required for property delegates
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Better for Android lifecycle
+import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,8 +24,12 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    // Fix: collectAsStateWithLifecycle is safer for Android UI
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // State for the username input field
+    val currentName by viewModel.currentName.collectAsStateWithLifecycle()
+    var nameInput by remember(currentName) { mutableStateOf(currentName) }
+
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -63,6 +66,46 @@ fun SettingsScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // --- NEW: Profile Section ---
+                    Text(
+                        "Profile",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = nameInput,
+                                onValueChange = { nameInput = it },
+                                label = { Text("Display Name") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                trailingIcon = {
+                                    if (nameInput != currentName) {
+                                        IconButton(onClick = { viewModel.updateName(nameInput) }) {
+                                            // FIX: Changed Save to Check to avoid dependency errors
+                                            Icon(Icons.Default.Check, contentDescription = "Save Name", tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    } else {
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            )
+                            Text(
+                                "This name will appear on your Home Screen greeting.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // --- Server Section ---
                     Text(
                         "Server",
                         style = MaterialTheme.typography.titleMedium,
@@ -88,7 +131,7 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        state.serverName, // Resolved via Success state
+                                        state.serverName,
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }
@@ -102,13 +145,14 @@ fun SettingsScreen(
                             HorizontalDivider()
 
                             Text(
-                                state.serverUrl, // Resolved via Success state
+                                state.serverUrl,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
+                    // --- App Section ---
                     Text(
                         "App",
                         style = MaterialTheme.typography.titleMedium,
@@ -135,6 +179,7 @@ fun SettingsScreen(
                         }
                     }
 
+                    // --- Account Section ---
                     Text(
                         "Account",
                         style = MaterialTheme.typography.titleMedium,
@@ -154,7 +199,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     Text(
-                        "Plex Glass Player - A beautiful music player for Plex",
+                        "Echo Floww",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -170,7 +215,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        state.message, // Resolved via Error state
+                        state.message,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -188,7 +233,7 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         showLogoutDialog = false
-                        viewModel.logout(onLogout) // Matches function in SettingsViewModel
+                        viewModel.logout(onLogout)
                     }
                 ) {
                     Text("Logout")
