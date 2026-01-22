@@ -124,13 +124,12 @@ fun NowPlayingScreen(
                         .clip(RoundedCornerShape(percent = 50))
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // --- 2. Functional Seek Bar (Below Album Image) ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(60.dp),
+                        .height(50.dp)
+                        .offset(y = (-8).dp), // Overlap slightly with artwork edge
                     contentAlignment = Alignment.TopCenter
                 ) {
                     ArcProgressBar(
@@ -150,7 +149,7 @@ fun NowPlayingScreen(
                     formatTime(currentPosition),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 8.dp)
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -216,9 +215,9 @@ fun ArcProgressBar(
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
 
-    // Geometry Constants - Arc curves downward following album artwork edge
-    val startAngle = 200f // Bottom-left
-    val sweepAngle = 140f // Clockwise to bottom-right (200° to 340°)
+    // Geometry Constants - Gentle arc matching pill edge
+    val startAngle = 210f // Start from left
+    val sweepAngle = 120f // Gentle curve across bottom
 
     Canvas(modifier = modifier
         .pointerInput(duration) {
@@ -239,17 +238,18 @@ fun ArcProgressBar(
             )
         }
     ) {
-        val strokeWidth = 5.dp.toPx()
+        val strokeWidth = 6.dp.toPx()
         val w = size.width
         val h = size.height
 
-        val arcDiameter = w * 0.75f
+        // Make arc much larger to create gentle curve - only top portion visible
+        val arcDiameter = w * 1.8f
         val arcRadius = arcDiameter / 2
 
-        // Lift the arc higher so it sits under the artwork and above the title
+        // Position arc so only gentle top curve is visible
         val topLeftOffset = Offset(
             x = (w - arcDiameter) / 2,
-            y = strokeWidth // Align near the top of this Box
+            y = -arcRadius * 0.7f // Move center down so we see gentle top curve
         )
 
         // Track
@@ -295,24 +295,23 @@ private fun calculateSeekFromOffset(
     sweepAngle: Float,
     duration: Long
 ): Long {
-    val arcDiameter = width * 0.75f
+    val arcDiameter = width * 1.8f
     val arcRadius = arcDiameter / 2
     val centerX = width / 2f
     // Center Y matches the arc drawing position
-    val strokeWidth = 5f // Approximate strokeWidth in pixels
-    val centerY = strokeWidth + arcRadius
+    val centerY = -arcRadius * 0.7f
 
     val dx = offset.x - centerX
     val dy = offset.y - centerY
 
-    // Check if touch is near the arc radius
+    // Check if touch is near the arc radius (more lenient for gentle curve)
     val distanceFromCenter = sqrt(dx * dx + dy * dy)
-    if (distanceFromCenter < arcRadius - 50f || distanceFromCenter > arcRadius + 50f) return -1L
+    if (distanceFromCenter < arcRadius - 100f || distanceFromCenter > arcRadius + 100f) return -1L
 
     var touchAngle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
     if (touchAngle < 0) touchAngle += 360f
 
-    // Calculate progress along the arc (200° to 340°)
+    // Calculate progress along the arc (210° to 330°)
     val progress = (touchAngle - startAngle) / sweepAngle
     return if (progress in 0f..1f) (progress * duration).toLong() else -1L
 }
