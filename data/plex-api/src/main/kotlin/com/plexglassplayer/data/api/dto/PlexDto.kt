@@ -146,6 +146,7 @@ data class TrackDto(
     @SerialName("Media") val media: List<MediaDto>? = null,
 
     // --- CRITICAL FOR DELETION ---
+    @SerialName("playlistItemID") val playlistItemId: String? = null,
     @SerialName("id") val id: Int? = null
 )
 
