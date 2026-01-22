@@ -124,13 +124,13 @@ fun NowPlayingScreen(
                         .clip(RoundedCornerShape(percent = 50))
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // --- 2. Functional Seek Bar (Below Album Image) ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
+                        .height(60.dp),
                     contentAlignment = Alignment.TopCenter
                 ) {
                     ArcProgressBar(
@@ -144,6 +144,14 @@ fun NowPlayingScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+
+                // Time display
+                Text(
+                    formatTime(currentPosition),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -162,12 +170,6 @@ fun NowPlayingScreen(
                         track.artist,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        formatTime(currentPosition),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.5f)
                     )
                 }
 
@@ -214,9 +216,9 @@ fun ArcProgressBar(
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
 
-    // Geometry Constants - Arc curves upward at the top
-    val startAngle = 215f // Top-left
-    val sweepAngle = 110f // Clockwise to top-right
+    // Geometry Constants - Arc curves downward following album artwork edge
+    val startAngle = 200f // Bottom-left
+    val sweepAngle = 140f // Clockwise to bottom-right (200° to 340°)
 
     Canvas(modifier = modifier
         .pointerInput(duration) {
@@ -310,7 +312,7 @@ private fun calculateSeekFromOffset(
     var touchAngle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
     if (touchAngle < 0) touchAngle += 360f
 
-    // Calculate progress along the arc (215° to 325°)
+    // Calculate progress along the arc (200° to 340°)
     val progress = (touchAngle - startAngle) / sweepAngle
     return if (progress in 0f..1f) (progress * duration).toLong() else -1L
 }
