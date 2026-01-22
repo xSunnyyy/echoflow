@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.plexglassplayer.data.auth.AuthRepository
 import com.plexglassplayer.data.repositories.ServerPreferences
+import com.plexglassplayer.data.repositories.UserPreferences // Import this
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,12 +17,15 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val serverPreferences: ServerPreferences
+    private val serverPreferences: ServerPreferences,
+    private val userPreferences: UserPreferences // Inject UserPreferences
 ) : ViewModel() {
 
-    // Success: Specified the explicit type for MutableStateFlow to resolve inference issues
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    // --- NEW: Expose username to UI ---
+    val currentName: StateFlow<String> = userPreferences.userName
 
     init {
         loadSettings()
@@ -33,9 +37,8 @@ class SettingsViewModel @Inject constructor(
                 val serverUrl = serverPreferences.getActiveServerUrl()
                 val serverId = serverPreferences.activeServerIdFlow.first()
 
-                // Ensure the Success data class exists in the sealed class below
                 _uiState.value = SettingsUiState.Success(
-                    serverName = "Plex Server", 
+                    serverName = "Plex Server",
                     serverUrl = serverUrl ?: "",
                     serverId = serverId ?: ""
                 )
@@ -44,6 +47,11 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = SettingsUiState.Error("Failed to load settings")
             }
         }
+    }
+
+    // --- NEW: Save username ---
+    fun updateName(name: String) {
+        userPreferences.saveUserName(name)
     }
 
     fun logout(onLogoutComplete: () -> Unit) {
@@ -71,7 +79,6 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-// Fixed: Ensure this sealed class is defined in the same file and package
 sealed class SettingsUiState {
     data object Loading : SettingsUiState()
     data class Success(

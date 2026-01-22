@@ -7,6 +7,7 @@ import com.plexglassplayer.core.model.Track
 import com.plexglassplayer.core.util.Result
 import com.plexglassplayer.data.repositories.LibraryRepository
 import com.plexglassplayer.data.repositories.PlaybackRepository
+import com.plexglassplayer.data.repositories.UserPreferences // Import this
 import com.plexglassplayer.feature.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -22,11 +23,12 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val playbackRepository: PlaybackRepository,
+    private val userPreferences: UserPreferences, // Inject UserPreferences
     val playbackManager: PlaybackManager
 ) : ViewModel() {
 
-    private val _userName = MutableStateFlow("User")
-    val userName: StateFlow<String> = _userName.asStateFlow()
+    // FIX: Read from UserPreferences instead of hardcoding "User"
+    val userName: StateFlow<String> = userPreferences.userName
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -74,8 +76,6 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState.Error("Unknown error")
         }
     }
-
-    // ... (Keep existing methods: playTrack, openPlaylist, etc. They are fine)
 
     fun playTrack(track: Track) {
         viewModelScope.launch {
@@ -164,17 +164,10 @@ class HomeViewModel @Inject constructor(
             val currentState = _uiState.value
             if (currentState is HomeUiState.Success && currentState.selectedPlaylist != null) {
                 try {
-                    val playlistItemId = track.playlistItemId ?: track.id
-                    Timber.d("Removing track: trackId=${track.id}, playlistItemId=${track.playlistItemId}, using=$playlistItemId")
-                    val result = libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, playlistItemId)
-                    if (result is Result.Success) {
-                        Timber.d("Successfully removed track from playlist")
-                        val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
-                        _uiState.update {
-                            (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
-                        }
-                    } else if (result is Result.Error) {
-                        Timber.e(result.exception, "Failed to remove track from playlist")
+                    libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, track.id)
+                    val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
+                    _uiState.update {
+                        (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
                     }
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to remove track from playlist")
