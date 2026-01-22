@@ -112,7 +112,7 @@ fun NowPlayingScreen(
                 // --- 1. Artwork Pill ---
                 Box(
                     modifier = Modifier
-                        .weight(1.2f)
+                        .weight(1f)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
@@ -124,16 +124,18 @@ fun NowPlayingScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth(0.75f)
-                            .fillMaxHeight(0.9f)
+                            .fillMaxHeight(0.85f)
                             .clip(RoundedCornerShape(percent = 50))
                     )
                 }
 
-                // --- 2. Functional Seek Bar (Above Title) ---
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- 2. Functional Seek Bar (Below Album Image) ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp), // Height for arc interaction
+                        .height(100.dp), // Reduced height for tighter positioning
                     contentAlignment = Alignment.TopCenter
                 ) {
                     ArcProgressBar(
@@ -147,6 +149,8 @@ fun NowPlayingScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // --- 3. Song Info (Below Seek Bar) ---
                 Column(
