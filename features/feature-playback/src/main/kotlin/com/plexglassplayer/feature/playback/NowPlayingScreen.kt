@@ -109,33 +109,28 @@ fun NowPlayingScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // --- 1. Artwork Pill ---
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(track.artworkUrl)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth(0.75f)
-                            .fillMaxHeight(0.85f)
-                            .clip(RoundedCornerShape(percent = 50))
-                    )
-                }
+                Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // --- 1. Artwork Pill ---
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(track.artworkUrl)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth(0.75f)
+                        .aspectRatio(0.85f)
+                        .clip(RoundedCornerShape(percent = 50))
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // --- 2. Functional Seek Bar (Below Album Image) ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp), // Reduced height for tighter positioning
+                        .height(80.dp),
                     contentAlignment = Alignment.TopCenter
                 ) {
                     ArcProgressBar(
@@ -150,9 +145,9 @@ fun NowPlayingScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
-                // --- 3. Song Info (Below Seek Bar) ---
+                // --- 3. Song Info ---
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(bottom = 16.dp)
