@@ -106,6 +106,7 @@ class LibraryRepository @Inject constructor(
 
         response.container.metadata.map { dto ->
             val track = dto.toModel()
+            Timber.d("Playlist item: trackId=${track.id}, playlistItemId=${dto.id}, title=${track.title}")
             // Store the playlist item ID separately to preserve the actual track ID
             track.copy(
                 playlistItemId = dto.id?.toString(),
@@ -157,7 +158,9 @@ class LibraryRepository @Inject constructor(
         val uri = getTrackUri(track.id, token, baseUrl)
         val url = "$baseUrl/playlists/$playlistId/items"
 
+        Timber.d("Adding to playlist: url=$url, uri=$uri, trackId=${track.id}")
         apiService.addToPlaylist(url, uri, token)
+        Timber.d("Successfully called API to add track to playlist")
     }
 
     suspend fun createPlaylist(title: String, firstTrack: Track): Result<Unit> = suspendRunCatching {
@@ -181,6 +184,8 @@ class LibraryRepository @Inject constructor(
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val url = "$baseUrl/playlists/$playlistId/items/$playlistItemId"
+        Timber.d("Removing from playlist: url=$url, playlistId=$playlistId, playlistItemId=$playlistItemId")
         apiService.removeFromPlaylist(url, token)
+        Timber.d("Successfully called API to remove track from playlist")
     }
 }

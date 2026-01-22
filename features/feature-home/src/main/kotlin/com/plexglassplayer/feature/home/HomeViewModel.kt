@@ -165,10 +165,16 @@ class HomeViewModel @Inject constructor(
             if (currentState is HomeUiState.Success && currentState.selectedPlaylist != null) {
                 try {
                     val playlistItemId = track.playlistItemId ?: track.id
-                    libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, playlistItemId)
-                    val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
-                    _uiState.update {
-                        (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
+                    Timber.d("Removing track: trackId=${track.id}, playlistItemId=${track.playlistItemId}, using=$playlistItemId")
+                    val result = libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, playlistItemId)
+                    if (result is Result.Success) {
+                        Timber.d("Successfully removed track from playlist")
+                        val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
+                        _uiState.update {
+                            (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
+                        }
+                    } else if (result is Result.Error) {
+                        Timber.e(result.exception, "Failed to remove track from playlist")
                     }
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to remove track from playlist")
