@@ -109,27 +109,31 @@ fun NowPlayingScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
-
                 // --- 1. Artwork Pill ---
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(track.artworkUrl)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.75f)
-                        .aspectRatio(0.85f)
-                        .clip(RoundedCornerShape(percent = 50))
-                )
+                        .weight(1.2f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(track.artworkUrl)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth(0.75f)
+                            .fillMaxHeight(0.9f)
+                            .clip(RoundedCornerShape(percent = 50))
+                    )
+                }
 
-                // --- 2. Functional Seek Bar (Below Album Image) ---
+                // --- 2. Functional Seek Bar (Above Title) ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .offset(y = (-8).dp), // Overlap slightly with artwork edge
+                        .height(160.dp), // Height for arc interaction
                     contentAlignment = Alignment.TopCenter
                 ) {
                     ArcProgressBar(
@@ -144,17 +148,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                // Time display
-                Text(
-                    formatTime(currentPosition),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // --- 3. Song Info ---
+                // --- 3. Song Info (Below Seek Bar) ---
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -169,6 +163,12 @@ fun NowPlayingScreen(
                         track.artist,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        formatTime(currentPosition),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.5f)
                     )
                 }
 
@@ -215,9 +215,9 @@ fun ArcProgressBar(
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
 
-    // Geometry Constants - Gentle arc matching pill edge
-    val startAngle = 210f // Start from left
-    val sweepAngle = 120f // Gentle curve across bottom
+    // Geometry Constants
+    val startAngle = 145f // Left side
+    val sweepAngle = -110f // Counter-clockwise to Right side
 
     Canvas(modifier = modifier
         .pointerInput(duration) {
@@ -238,18 +238,17 @@ fun ArcProgressBar(
             )
         }
     ) {
-        val strokeWidth = 6.dp.toPx()
+        val strokeWidth = 5.dp.toPx()
         val w = size.width
         val h = size.height
 
-        // Make arc much larger to create gentle curve - only top portion visible
-        val arcDiameter = w * 1.8f
+        val arcDiameter = w * 0.75f
         val arcRadius = arcDiameter / 2
 
-        // Position arc so only gentle top curve is visible
+        // Lift the arc higher so it sits under the artwork and above the title
         val topLeftOffset = Offset(
             x = (w - arcDiameter) / 2,
-            y = -arcRadius * 0.7f // Move center down so we see gentle top curve
+            y = strokeWidth // Align near the top of this Box
         )
 
         // Track
@@ -295,23 +294,23 @@ private fun calculateSeekFromOffset(
     sweepAngle: Float,
     duration: Long
 ): Long {
-    val arcDiameter = width * 1.8f
+    val arcDiameter = width * 0.75f
     val arcRadius = arcDiameter / 2
     val centerX = width / 2f
-    // Center Y matches the arc drawing position
-    val centerY = -arcRadius * 0.7f
+    val centerY = 5.dp.value + arcRadius // Theoretical center of the circle
 
     val dx = offset.x - centerX
     val dy = offset.y - centerY
 
-    // Check if touch is near the arc radius (more lenient for gentle curve)
+    // Check if touch is near the arc radius
     val distanceFromCenter = sqrt(dx * dx + dy * dy)
-    if (distanceFromCenter < arcRadius - 100f || distanceFromCenter > arcRadius + 100f) return -1L
+    if (distanceFromCenter < arcRadius - 50f || distanceFromCenter > arcRadius + 50f) return -1L
 
     var touchAngle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
     if (touchAngle < 0) touchAngle += 360f
 
-    // Calculate progress along the arc (210° to 330°)
+    // startAngle is 145, endAngle is 145 - 110 = 35
+    // Normalize touchAngle to progress
     val progress = (touchAngle - startAngle) / sweepAngle
     return if (progress in 0f..1f) (progress * duration).toLong() else -1L
 }
