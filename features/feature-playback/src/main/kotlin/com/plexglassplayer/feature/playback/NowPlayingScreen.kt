@@ -4,11 +4,13 @@ import android.content.Context
 import android.media.AudioManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
@@ -20,6 +22,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -38,13 +43,19 @@ import com.plexglassplayer.core.model.RepeatMode
 import com.plexglassplayer.core.util.formatDuration
 import com.plexglassplayer.feature.playback.NowPlayingViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
-private val TextPrimary = Color.White
-private val TextSecondary = Color.White.copy(alpha = 0.7f)
-private val TextTertiary = Color.White.copy(alpha = 0.5f)
-private val PlayButtonColor = Color(0xFF7CA0C0)
-private val ActiveIconColor = Color(0xFF7CA0C0)
+private val TextPrimary = Color(0xFF0E0E10)
+private val TextSecondary = Color(0xFF5A5A60)
+private val TextTertiary = Color(0xFF8B8B92)
+private val PlayButtonColor = Color(0xFF111113)
+private val ActiveIconColor = Color(0xFF111113)
 private val AccentMint = Color(0xFFB0F2E2)
+private val ScreenBackground = Color(0xFFF4F4F6)
+private val CardBackground = Color(0xFF1A2233)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,31 +96,11 @@ fun NowPlayingScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        // --- 1. BACKGROUND ---
-        currentTrack?.artworkUrl?.let { artUrl ->
-            AsyncImage(
-                model = artUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(50.dp),
-                contentScale = ContentScale.Crop
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.3f),
-                                Color.Black.copy(alpha = 0.6f),
-                                Color.Black.copy(alpha = 0.95f)
-                            )
-                        )
-                    )
-            )
-        }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(ScreenBackground)
+    ) {
 
         Column(
             modifier = Modifier
@@ -118,43 +109,31 @@ fun NowPlayingScreen(
         ) {
 
             // --- 2. HEADER ---
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onBackClick,
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(44.dp)
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                    modifier = Modifier.size(40.dp),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = TextPrimary)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = TextPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Text(
-                    text = "NOW PLAYING",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
-                    ),
-                    color = TextPrimary.copy(alpha = 0.9f)
-                )
-
                 IconButton(
                     onClick = onQueueClick,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(44.dp)
+                    modifier = Modifier.size(40.dp),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = TextPrimary)
                 ) {
-                    Icon(Icons.Default.QueueMusic, contentDescription = "Queue", tint = TextPrimary)
+                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                 }
             }
 
@@ -165,16 +144,14 @@ fun NowPlayingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // --- 3. ALBUM ART ---
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .shadow(32.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.8f))
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.DarkGray)
+                        .fillMaxWidth(0.82f)
+                        .aspectRatio(0.78f)
+                        .shadow(24.dp, RoundedCornerShape(80.dp), spotColor = Color.Black.copy(alpha = 0.35f))
+                        .clip(RoundedCornerShape(80.dp))
+                        .background(CardBackground)
                 ) {
                     AsyncImage(
                         model = currentTrack?.artworkUrl,
@@ -182,15 +159,60 @@ fun NowPlayingScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.45f),
+                                        Color.Black.copy(alpha = 0.8f)
+                                    ),
+                                    startY = 0.4f
+                                )
+                            )
+                    )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 28.dp, start = 24.dp, end = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = currentTrack?.title ?: "Not Playing",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = currentTrack?.artist ?: "Unknown Artist",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = Color.White.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
 
-                // --- 4. SEEK BAR ---
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                GlowingSeekBar(
+                ArcSeekBar(
                     position = currentPosition,
                     duration = duration,
-                    onSeek = { newPos -> playbackManager.seekTo(newPos) }
+                    onSeek = { newPos -> playbackManager.seekTo(newPos) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
                 )
 
                 Row(
@@ -211,46 +233,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // --- 5. TEXT INFO ---
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = currentTrack?.title ?: "Not Playing",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = currentTrack?.artist ?: "Unknown Artist",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = currentTrack?.album ?: "Unknown Album",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // --- 6. CONTROLS ---
                 Row(
@@ -269,15 +252,15 @@ fun NowPlayingScreen(
 
                     // Previous
                     IconButton(onClick = { playbackManager.playPrevious() }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipPrevious, "Prev", tint = TextPrimary, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipPrevious, "Prev", tint = TextPrimary, modifier = Modifier.size(28.dp))
                     }
 
                     // Play/Pause
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
-                            .shadow(12.dp, RoundedCornerShape(22.dp), spotColor = PlayButtonColor.copy(alpha = 0.5f))
-                            .clip(RoundedCornerShape(22.dp))
+                            .size(70.dp)
+                            .shadow(12.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.25f))
+                            .clip(CircleShape)
                             .background(PlayButtonColor)
                             .clickable { playbackManager.playPause() },
                         contentAlignment = Alignment.Center
@@ -285,14 +268,14 @@ fun NowPlayingScreen(
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = "Play/Pause",
-                            tint = Color.Black.copy(alpha = 0.8f),
-                            modifier = Modifier.size(36.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(34.dp)
                         )
                     }
 
                     // Next
                     IconButton(onClick = { playbackManager.playNext() }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.SkipNext, "Next", tint = TextPrimary, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipNext, "Next", tint = TextPrimary, modifier = Modifier.size(28.dp))
                     }
 
                     // Repeat
@@ -303,13 +286,13 @@ fun NowPlayingScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // --- 7. VOLUME & ADD TO PLAYLIST ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 32.dp),
+                        .padding(bottom = 24.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -326,7 +309,7 @@ fun NowPlayingScreen(
                         colors = SliderDefaults.colors(
                             thumbColor = TextSecondary,
                             activeTrackColor = TextSecondary,
-                            inactiveTrackColor = TextSecondary.copy(alpha = 0.1f)
+                            inactiveTrackColor = TextSecondary.copy(alpha = 0.2f)
                         )
                     )
 
@@ -460,44 +443,98 @@ fun NowPlayingScreen(
     }
 }
 
-/**
- * Thinner "Glowing" Seek Bar
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GlowingSeekBar(
+fun ArcSeekBar(
     position: Long,
     duration: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Slider(
-        value = if (duration > 0) position.toFloat() / duration else 0f,
-        onValueChange = { onSeek((it * duration).toLong()) },
-        modifier = modifier.fillMaxWidth(),
-        thumb = {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = CircleShape,
-                        spotColor = PlayButtonColor,
-                        ambientColor = PlayButtonColor
-                    )
-                    .background(PlayButtonColor, CircleShape)
+    val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    val startAngle = 200f
+    val sweepAngle = 140f
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(duration) {
+                    detectDragGestures { change, _ ->
+                        val center = Offset(size.width / 2f, size.height)
+                        val touch = change.position
+                        val angle = Math.toDegrees(
+                            atan2(
+                                (touch.y - center.y).toDouble(),
+                                (touch.x - center.x).toDouble()
+                            )
+                        ).toFloat().let { if (it < 0) it + 360f else it }
+
+                        val endAngle = (startAngle + sweepAngle) % 360f
+                        val inRange = if (startAngle < endAngle) {
+                            angle in startAngle..endAngle
+                        } else {
+                            angle >= startAngle || angle <= endAngle
+                        }
+
+                        if (inRange && duration > 0) {
+                            val clamped = if (startAngle < endAngle) {
+                                angle.coerceIn(startAngle, endAngle)
+                            } else {
+                                if (angle >= startAngle) angle else angle + 360f
+                            }
+                            val normalized = (clamped - startAngle) / sweepAngle
+                            val newPos = (normalized.coerceIn(0f, 1f) * duration).toLong()
+                            onSeek(newPos)
+                        }
+                    }
+                }
+        ) {
+            val strokeWidth = 10.dp.toPx()
+            val radius = min(size.width, size.height * 2f) / 2f - strokeWidth
+            val center = Offset(size.width / 2f, size.height)
+
+            drawArc(
+                color = Color.Black.copy(alpha = 0.08f),
+                startAngle = startAngle,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                topLeft = Offset(center.x - radius, center.y - radius),
+                size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
-        },
-        track = { sliderState ->
-            SliderDefaults.Track(
-                sliderState = sliderState,
-                colors = SliderDefaults.colors(
-                    activeTrackColor = PlayButtonColor,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.2f),
-                    thumbColor = PlayButtonColor
-                ),
-                modifier = Modifier.height(2.dp)
+
+            drawArc(
+                color = PlayButtonColor,
+                startAngle = startAngle,
+                sweepAngle = sweepAngle * progress,
+                useCenter = false,
+                topLeft = Offset(center.x - radius, center.y - radius),
+                size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            val theta = Math.toRadians((startAngle + sweepAngle * progress).toDouble())
+            val thumbX = center.x + radius * cos(theta).toFloat()
+            val thumbY = center.y + radius * sin(theta).toFloat()
+            drawCircle(
+                color = Color.White,
+                radius = 10.dp.toPx(),
+                center = Offset(thumbX, thumbY)
+            )
+            drawCircle(
+                color = PlayButtonColor,
+                radius = 6.dp.toPx(),
+                center = Offset(thumbX, thumbY)
             )
         }
-    )
+
+        Text(
+            text = duration.formatDuration(),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = TextSecondary
+        )
+    }
 }

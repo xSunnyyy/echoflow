@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,6 +92,7 @@ fun HomeScreen(
     val isPlaying by playbackManager.isPlaying.collectAsState()
     val duration by playbackManager.duration.collectAsState()
     val context = LocalContext.current
+    val layoutDirection = LocalLayoutDirection.current
 
     var currentPosition by remember { mutableLongStateOf(0L) }
 
@@ -173,7 +175,12 @@ fun HomeScreen(
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = { viewModel.refresh() },
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(
+                    start = paddingValues.calculateStartPadding(layoutDirection),
+                    top = 4.dp,
+                    end = paddingValues.calculateEndPadding(layoutDirection),
+                    bottom = paddingValues.calculateBottomPadding()
+                )
             ) {
                 when (val state = uiState) {
                     is HomeUiState.Loading -> {
@@ -194,7 +201,7 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 0.dp),
+                                        .padding(start = 20.dp, end = 8.dp, top = 0.dp, bottom = 0.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {

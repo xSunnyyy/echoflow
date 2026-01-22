@@ -5,6 +5,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Query
 import retrofit2.http.Url
 import retrofit2.http.Path
@@ -70,7 +71,7 @@ interface PlexApiService {
         @Query("X-Plex-Container-Start") offset: Int = 0, @Query("X-Plex-Container-Size") limit: Int = 50
     ): TracksResponse
 
-    @POST
+    @PUT
     suspend fun addToPlaylist(@Url url: String, @Query("uri") uri: String, @Query("X-Plex-Token") token: String): TracksResponse
 
     @POST

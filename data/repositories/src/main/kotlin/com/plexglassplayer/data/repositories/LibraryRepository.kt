@@ -108,7 +108,7 @@ class LibraryRepository @Inject constructor(
             val track = dto.toModel()
             // Store the playlist item ID separately to preserve the actual track ID
             track.copy(
-                playlistItemId = dto.id?.toString(),
+                playlistItemId = dto.playlistItemId ?: dto.id?.toString(),
                 artUrl = getAbsoluteUrl(track.artUrl, baseUrl, token)
             )
         }
