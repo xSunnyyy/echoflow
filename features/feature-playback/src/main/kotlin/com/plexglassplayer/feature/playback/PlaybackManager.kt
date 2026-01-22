@@ -92,6 +92,24 @@ class PlaybackManager @Inject constructor(
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateCurrentTrack()
             }
+
+            // FIX: Listen for Shuffle changes to update UI state
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                _shuffleEnabled.value = shuffleModeEnabled
+                Timber.d("Shuffle mode changed: $shuffleModeEnabled")
+            }
+
+            // FIX: Listen for Repeat changes and map to our Enum
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                val mode = when (repeatMode) {
+                    Player.REPEAT_MODE_OFF -> RepeatMode.OFF
+                    Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+                    Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+                    else -> RepeatMode.OFF
+                }
+                _repeatMode.value = mode
+                Timber.d("Repeat mode changed: $mode")
+            }
         })
     }
 
@@ -164,6 +182,7 @@ class PlaybackManager @Inject constructor(
         mediaController?.seekTo(positionMs)
     }
 
+    // FIX: Method name now matches the enum type for better consistency
     fun setRepeatMode(repeatMode: RepeatMode) {
         _repeatMode.value = repeatMode
         val playerRepeatMode = when (repeatMode) {
@@ -174,6 +193,7 @@ class PlaybackManager @Inject constructor(
         mediaController?.repeatMode = playerRepeatMode
     }
 
+    // FIX: Matched to NowPlayingScreen call
     fun toggleRepeatMode() {
         val newMode = when (_repeatMode.value) {
             RepeatMode.OFF -> RepeatMode.ALL
@@ -188,6 +208,7 @@ class PlaybackManager @Inject constructor(
         mediaController?.shuffleModeEnabled = enabled
     }
 
+    // FIX: Matched to NowPlayingScreen call
     fun toggleShuffle() {
         setShuffle(!_shuffleEnabled.value)
     }
@@ -196,9 +217,6 @@ class PlaybackManager @Inject constructor(
         return mediaController?.currentPosition ?: 0L
     }
 
-    /**
-     * Play a specific track from the queue by index
-     */
     fun playFromQueue(index: Int) {
         if (index >= 0 && index < _queue.value.size) {
             mediaController?.seekToDefaultPosition(index)
@@ -206,16 +224,12 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    /**
-     * Remove a track from the queue
-     */
     fun removeFromQueue(index: Int) {
         if (index >= 0 && index < _queue.value.size && index != _currentIndex.value) {
             val newQueue = _queue.value.toMutableList()
             newQueue.removeAt(index)
             _queue.value = newQueue
 
-            // Rebuild media items
             val mediaItems = newQueue.map { track ->
                 MediaItem.Builder()
                     .setUri(track.uri)
@@ -244,9 +258,6 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    /**
-     * Clear the entire queue
-     */
     fun clearQueue() {
         mediaController?.stop()
         mediaController?.clearMediaItems()
@@ -255,9 +266,6 @@ class PlaybackManager @Inject constructor(
         _currentIndex.value = 0
     }
 
-    /**
-     * Add track to end of queue
-     */
     fun addToQueue(track: QueueItem) {
         val newQueue = _queue.value.toMutableList()
         newQueue.add(track)

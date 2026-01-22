@@ -34,23 +34,14 @@ class ServerPreferences @Inject constructor(
         }
     }
 
-    // --- ADDED THIS MISSING FUNCTION ---
+    suspend fun getActiveServerUrl(): String? = dataStore.data.first()[KEY_ACTIVE_SERVER_URL]
+    suspend fun getMusicSectionKey(): String? = dataStore.data.first()[KEY_MUSIC_SECTION_KEY]
+
+    // --- ADDED MISSING FUNCTIONS ---
+    suspend fun getServerId(): String? = dataStore.data.first()[KEY_ACTIVE_SERVER_ID]
+
     suspend fun saveServerId(serverId: String) {
-        dataStore.edit { prefs ->
-            prefs[KEY_ACTIVE_SERVER_ID] = serverId
-        }
-    }
-
-    suspend fun getActiveServerUrl(): String? {
-        return dataStore.data.first()[KEY_ACTIVE_SERVER_URL]
-    }
-
-    suspend fun getMusicSectionKey(): String? {
-        return dataStore.data.first()[KEY_MUSIC_SECTION_KEY]
-    }
-
-    suspend fun getServerId(): String? {
-        return dataStore.data.first()[KEY_ACTIVE_SERVER_ID]
+        dataStore.edit { prefs -> prefs[KEY_ACTIVE_SERVER_ID] = serverId }
     }
 
     suspend fun clearActiveServer() {

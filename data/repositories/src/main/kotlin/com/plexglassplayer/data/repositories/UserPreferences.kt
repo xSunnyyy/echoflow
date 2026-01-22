@@ -14,17 +14,11 @@ class UserPreferences @Inject constructor(
     @ApplicationContext context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-
-    // Reactive stream so UI updates instantly
-    private val _userName = MutableStateFlow(prefs.getString(KEY_USERNAME, "User") ?: "User")
+    private val _userName = MutableStateFlow(prefs.getString("username", "User") ?: "User")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    companion object {
-        private const val KEY_USERNAME = "username"
-    }
-
     fun saveUserName(name: String) {
-        prefs.edit().putString(KEY_USERNAME, name).apply()
+        prefs.edit().putString("username", name).apply()
         _userName.value = name
     }
 }

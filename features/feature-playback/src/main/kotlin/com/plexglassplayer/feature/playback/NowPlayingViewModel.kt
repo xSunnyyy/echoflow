@@ -17,7 +17,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NowPlayingViewModel @Inject constructor(
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    // FIX: Inject PlaybackManager and expose it as a property
+    val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
@@ -29,7 +31,6 @@ class NowPlayingViewModel @Inject constructor(
 
     private fun loadPlaylists() {
         viewModelScope.launch {
-            // Using 'if' here is fine because we only care about Success
             val result = libraryRepository.getPlaylists()
             if (result is Result.Success) {
                 _playlists.value = result.data
@@ -54,7 +55,6 @@ class NowPlayingViewModel @Inject constructor(
 
             val result = libraryRepository.addToPlaylist(playlist.id, track)
 
-            // FIX: Added 'else' branch to handle other states (like Loading)
             when (result) {
                 is Result.Success -> {
                     Timber.d("Successfully added track to playlist")
@@ -62,14 +62,11 @@ class NowPlayingViewModel @Inject constructor(
                 is Result.Error -> {
                     Timber.e(result.exception, "Failed to add track to playlist")
                 }
-                else -> {
-                    // Handle Loading or other states if necessary
-                }
+                else -> {}
             }
         }
     }
 
-    // --- Create Playlist ---
     fun createPlaylist(name: String, queueItem: QueueItem) {
         viewModelScope.launch {
             val track = Track(
@@ -83,7 +80,7 @@ class NowPlayingViewModel @Inject constructor(
                 streamKey = ""
             )
             libraryRepository.createPlaylist(name, track)
-            loadPlaylists() // Refresh the playlist list
+            loadPlaylists()
         }
     }
 }
