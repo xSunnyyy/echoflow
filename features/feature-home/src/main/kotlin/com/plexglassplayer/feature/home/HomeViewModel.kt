@@ -164,7 +164,8 @@ class HomeViewModel @Inject constructor(
             val currentState = _uiState.value
             if (currentState is HomeUiState.Success && currentState.selectedPlaylist != null) {
                 try {
-                    libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, track.id)
+                    val playlistItemId = track.playlistItemId ?: track.id
+                    libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, playlistItemId)
                     val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
                     _uiState.update {
                         (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
