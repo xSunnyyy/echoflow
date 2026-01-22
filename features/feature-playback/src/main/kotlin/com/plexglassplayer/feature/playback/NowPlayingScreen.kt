@@ -214,9 +214,9 @@ fun ArcProgressBar(
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
 
-    // Geometry Constants
-    val startAngle = 145f // Left side
-    val sweepAngle = -110f // Counter-clockwise to Right side
+    // Geometry Constants - Arc curves upward at the top
+    val startAngle = 215f // Top-left
+    val sweepAngle = 110f // Clockwise to top-right
 
     Canvas(modifier = modifier
         .pointerInput(duration) {
@@ -296,7 +296,9 @@ private fun calculateSeekFromOffset(
     val arcDiameter = width * 0.75f
     val arcRadius = arcDiameter / 2
     val centerX = width / 2f
-    val centerY = 5.dp.value + arcRadius // Theoretical center of the circle
+    // Center Y matches the arc drawing position
+    val strokeWidth = 5f // Approximate strokeWidth in pixels
+    val centerY = strokeWidth + arcRadius
 
     val dx = offset.x - centerX
     val dy = offset.y - centerY
@@ -308,8 +310,7 @@ private fun calculateSeekFromOffset(
     var touchAngle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
     if (touchAngle < 0) touchAngle += 360f
 
-    // startAngle is 145, endAngle is 145 - 110 = 35
-    // Normalize touchAngle to progress
+    // Calculate progress along the arc (215° to 325°)
     val progress = (touchAngle - startAngle) / sweepAngle
     return if (progress in 0f..1f) (progress * duration).toLong() else -1L
 }
