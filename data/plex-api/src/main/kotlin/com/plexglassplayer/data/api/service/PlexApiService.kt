@@ -11,7 +11,13 @@ import retrofit2.http.Path
 
 interface PlexApiService {
 
-    // --- AUTH ---
+    // --- Helper to get Server ID ---
+    @GET
+    suspend fun getIdentity(
+        @Url url: String,
+        @Header("X-Plex-Token") token: String
+    ): IdentityResponse
+
     @POST("api/v2/pins")
     suspend fun createPin(
         @Header("X-Plex-Client-Identifier") clientId: String,
@@ -34,74 +40,48 @@ interface PlexApiService {
         @Query("includeRelay") includeRelay: Int = 1
     ): List<DeviceDto>
 
-    // --- LIBRARY ---
     @GET
-    suspend fun getLibrarySections(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String
-    ): LibrarySectionsResponse
+    suspend fun getLibrarySections(@Url url: String, @Query("X-Plex-Token") token: String): LibrarySectionsResponse
 
     @GET
     suspend fun getArtists(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String,
-        @Query("X-Plex-Container-Start") offset: Int = 0,
-        @Query("X-Plex-Container-Size") limit: Int = 50
+        @Url url: String, @Query("X-Plex-Token") token: String,
+        @Query("X-Plex-Container-Start") offset: Int = 0, @Query("X-Plex-Container-Size") limit: Int = 50
     ): ArtistsResponse
 
     @GET
     suspend fun getAlbums(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String,
-        @Query("X-Plex-Container-Start") offset: Int = 0,
-        @Query("X-Plex-Container-Size") limit: Int = 50
+        @Url url: String, @Query("X-Plex-Token") token: String,
+        @Query("X-Plex-Container-Start") offset: Int = 0, @Query("X-Plex-Container-Size") limit: Int = 50
     ): AlbumsResponse
 
     @GET
     suspend fun getTracks(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String,
-        @Query("X-Plex-Container-Start") offset: Int = 0,
-        @Query("X-Plex-Container-Size") limit: Int = 50
+        @Url url: String, @Query("X-Plex-Token") token: String,
+        @Query("X-Plex-Container-Start") offset: Int = 0, @Query("X-Plex-Container-Size") limit: Int = 50
     ): TracksResponse
 
     @GET
-    suspend fun getPlaylists(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String
-    ): PlaylistsResponse
+    suspend fun getPlaylists(@Url url: String, @Query("X-Plex-Token") token: String): PlaylistsResponse
 
     @GET
     suspend fun search(
-        @Url url: String,
-        @Query("query") query: String,
-        @Query("X-Plex-Token") token: String,
-        @Query("X-Plex-Container-Start") offset: Int = 0,
-        @Query("X-Plex-Container-Size") limit: Int = 50
+        @Url url: String, @Query("query") query: String, @Query("X-Plex-Token") token: String,
+        @Query("X-Plex-Container-Start") offset: Int = 0, @Query("X-Plex-Container-Size") limit: Int = 50
     ): TracksResponse
 
-    // --- PLAYLIST ACTIONS ---
     @POST
-    suspend fun addToPlaylist(
-        @Url url: String,
-        @Query("uri") uri: String,
-        @Query("X-Plex-Token") token: String
-    ): TracksResponse
+    suspend fun addToPlaylist(@Url url: String, @Query("uri") uri: String, @Query("X-Plex-Token") token: String): TracksResponse
 
     @POST
     suspend fun createPlaylist(
-        @Url url: String,
-        @Query("type") type: String = "audio",
-        @Query("title") title: String,
-        @Query("smart") smart: Int = 0,
-        @Query("uri") uri: String,
-        @Query("X-Plex-Token") token: String
+        @Url url: String, @Query("type") type: String = "audio", @Query("title") title: String,
+        @Query("smart") smart: Int = 0, @Query("uri") uri: String, @Query("X-Plex-Token") token: String
     ): TracksResponse
 
-    // --- FIXED: Returns Unit (Retrofit handles errors automatically) ---
     @DELETE
-    suspend fun deletePlaylist(
-        @Url url: String,
-        @Query("X-Plex-Token") token: String
-    )
+    suspend fun deletePlaylist(@Url url: String, @Query("X-Plex-Token") token: String)
+
+    @DELETE
+    suspend fun removeFromPlaylist(@Url url: String, @Query("X-Plex-Token") token: String)
 }

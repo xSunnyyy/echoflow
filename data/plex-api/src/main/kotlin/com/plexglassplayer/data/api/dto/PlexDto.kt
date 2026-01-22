@@ -4,7 +4,18 @@ import com.plexglassplayer.core.model.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// Plex PIN auth DTOs
+// --- NEW: Identity DTOs ---
+@Serializable
+data class IdentityResponse(
+    @SerialName("MediaContainer") val container: IdentityContainer
+)
+
+@Serializable
+data class IdentityContainer(
+    @SerialName("machineIdentifier") val machineIdentifier: String? = null
+)
+
+// Auth
 @Serializable
 data class PinResponse(
     val id: String,
@@ -12,18 +23,12 @@ data class PinResponse(
     @SerialName("authToken") val authToken: String? = null
 )
 
-// ----------------------------
-// Plex resources (servers) DTOs
-// ✅ JSON LIST (api/v2/resources returns a JSON array)
-// ----------------------------
-
+// Resources
 @Serializable
 data class DeviceDto(
     @SerialName("clientIdentifier") val clientIdentifier: String,
     @SerialName("name") val name: String,
     @SerialName("owned") val owned: Boolean = false,
-
-    // ✅ JSON uses "connections" (lowercase), not "Connection"
     @SerialName("connections") val connections: List<ConnectionDto> = emptyList()
 )
 
@@ -46,17 +51,10 @@ fun DeviceDto.toModel(): PlexServer {
 }
 
 fun ConnectionDto.toModel(): ServerConnection {
-    return ServerConnection(
-        uri = uri,
-        isLocal = local,
-        isSecure = protocol == "https",
-        isRelay = relay
-    )
+    return ServerConnection(uri = uri, isLocal = local, isSecure = protocol == "https", isRelay = relay)
 }
 
-// ----------------------------
-// Library DTOs
-// ----------------------------
+// Library
 @Serializable
 data class LibrarySectionsResponse(
     @SerialName("MediaContainer") val container: LibrarySectionsContainer
@@ -71,12 +69,10 @@ data class LibrarySectionsContainer(
 data class LibrarySectionDto(
     val key: String,
     val title: String,
-    val type: String // "artist", "movie", "show", etc.
+    val type: String
 )
 
-// ----------------------------
-// Artist DTOs
-// ----------------------------
+// Artist
 @Serializable
 data class ArtistsResponse(
     @SerialName("MediaContainer") val container: ArtistsContainer
@@ -97,17 +93,10 @@ data class ArtistDto(
 )
 
 fun ArtistDto.toModel(): Artist {
-    return Artist(
-        id = ratingKey,
-        name = title,
-        artUrl = art,
-        thumbUrl = thumb
-    )
+    return Artist(id = ratingKey, name = title, artUrl = art, thumbUrl = thumb)
 }
 
-// ----------------------------
-// Album DTOs
-// ----------------------------
+// Album
 @Serializable
 data class AlbumsResponse(
     @SerialName("MediaContainer") val container: AlbumsContainer
@@ -129,18 +118,10 @@ data class AlbumDto(
 )
 
 fun AlbumDto.toModel(): Album {
-    return Album(
-        id = ratingKey,
-        title = title,
-        artistName = parentTitle ?: "Unknown Artist",
-        year = year,
-        artUrl = thumb
-    )
+    return Album(id = ratingKey, title = title, artistName = parentTitle ?: "Unknown Artist", year = year, artUrl = thumb)
 }
 
-// ----------------------------
-// Track DTOs
-// ----------------------------
+// Track
 @Serializable
 data class TracksResponse(
     @SerialName("MediaContainer") val container: TracksContainer
@@ -157,12 +138,15 @@ data class TrackDto(
     @SerialName("ratingKey") val ratingKey: String,
     val key: String,
     val title: String,
-    @SerialName("grandparentTitle") val grandparentTitle: String? = null, // Artist
-    @SerialName("parentTitle") val parentTitle: String? = null, // Album
+    @SerialName("grandparentTitle") val grandparentTitle: String? = null,
+    @SerialName("parentTitle") val parentTitle: String? = null,
     val duration: Long? = null,
     val index: Int? = null,
     val thumb: String? = null,
-    @SerialName("Media") val media: List<MediaDto>? = null
+    @SerialName("Media") val media: List<MediaDto>? = null,
+
+    // --- CRITICAL FOR DELETION ---
+    @SerialName("id") val id: Int? = null
 )
 
 @Serializable
@@ -177,10 +161,7 @@ data class PartDto(
 )
 
 fun TrackDto.toModel(): Track {
-    // Try to get the actual media file path from Media->Part->key
-    // This is the direct playable path, not the metadata path
     val mediaKey = media?.firstOrNull()?.parts?.firstOrNull()?.key
-
     return Track(
         id = ratingKey,
         title = title,
@@ -189,14 +170,11 @@ fun TrackDto.toModel(): Track {
         durationMs = duration ?: 0L,
         trackNumber = index,
         artUrl = thumb,
-        // Use media part key if available, fallback to metadata key
         streamKey = mediaKey ?: key
     )
 }
 
-// ----------------------------
-// Playlist DTOs
-// ----------------------------
+// Playlist
 @Serializable
 data class PlaylistsResponse(
     @SerialName("MediaContainer") val container: PlaylistsContainer
@@ -216,10 +194,5 @@ data class PlaylistDto(
 )
 
 fun PlaylistDto.toModel(): Playlist {
-    return Playlist(
-        id = ratingKey,
-        title = title,
-        trackCount = leafCount,
-        artUrl = thumb
-    )
+    return Playlist(id = ratingKey, title = title, trackCount = leafCount, artUrl = thumb)
 }

@@ -3,7 +3,7 @@ package com.plexglassplayer.data.repositories
 import com.plexglassplayer.core.model.*
 import com.plexglassplayer.core.util.Result
 import com.plexglassplayer.core.util.suspendRunCatching
-import com.plexglassplayer.data.api.dto.toModel
+import com.plexglassplayer.data.api.dto.*
 import com.plexglassplayer.data.api.service.PlexApiService
 import com.plexglassplayer.data.auth.SessionStore
 import timber.log.Timber
@@ -103,9 +103,14 @@ class LibraryRepository @Inject constructor(
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val url = "$baseUrl/playlists/$playlistId/items"
         val response = apiService.getTracks(url, token, offset, limit)
+
         response.container.metadata.map { dto ->
             val track = dto.toModel()
-            track.copy(artUrl = getAbsoluteUrl(track.artUrl, baseUrl, token))
+            // Map the playlist item ID (dto.id) to track.id so deletion works
+            track.copy(
+                id = dto.id?.toString() ?: track.id,
+                artUrl = getAbsoluteUrl(track.artUrl, baseUrl, token)
+            )
         }
     }
 
@@ -120,8 +125,24 @@ class LibraryRepository @Inject constructor(
         }
     }
 
-    private suspend fun getTrackUri(trackId: String): String {
-        val machineId = serverPreferences.getServerId()
+    // --- Helper to get Server ID ---
+    private suspend fun getTrackUri(trackId: String, token: String, baseUrl: String): String {
+        var machineId = serverPreferences.getServerId()
+
+        if (machineId.isNullOrEmpty()) {
+            try {
+                // Fetch identity if missing
+                val identityUrl = "$baseUrl/identity"
+                val identity = apiService.getIdentity(identityUrl, token)
+                machineId = identity.container.machineIdentifier
+                if (machineId != null) {
+                    serverPreferences.saveServerId(machineId)
+                }
+            } catch (e: Exception) {
+                Timber.e("Failed to fetch machine ID: $e")
+            }
+        }
+
         return if (!machineId.isNullOrEmpty()) {
             "server://$machineId/com.plexapp.plugins.library/library/metadata/$trackId"
         } else {
@@ -132,28 +153,34 @@ class LibraryRepository @Inject constructor(
     suspend fun addToPlaylist(playlistId: String, track: Track): Result<Unit> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val uri = getTrackUri(track.id)
+
+        val uri = getTrackUri(track.id, token, baseUrl)
         val url = "$baseUrl/playlists/$playlistId/items"
-        Timber.d("Adding to playlist: URL=$url, URI=$uri")
+
         apiService.addToPlaylist(url, uri, token)
     }
 
     suspend fun createPlaylist(title: String, firstTrack: Track): Result<Unit> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
-        val uri = getTrackUri(firstTrack.id)
+
+        val uri = getTrackUri(firstTrack.id, token, baseUrl)
         val url = "$baseUrl/playlists"
-        Timber.d("Creating playlist '$title' with URI=$uri")
+
         apiService.createPlaylist(url = url, title = title, uri = uri, token = token)
     }
 
-    // --- FIXED: No more checks, just call API ---
     suspend fun deletePlaylist(playlistId: String): Result<Unit> = suspendRunCatching {
         val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
         val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
         val url = "$baseUrl/playlists/$playlistId"
-
-        // Retrofit throws exception if non-2xx
         apiService.deletePlaylist(url, token)
+    }
+
+    suspend fun removeTrackFromPlaylist(playlistId: String, playlistItemId: String): Result<Unit> = suspendRunCatching {
+        val token = sessionStore.getAccessToken() ?: throw IllegalStateException("No auth token")
+        val baseUrl = serverPreferences.getActiveServerUrl() ?: throw IllegalStateException("No active server")
+        val url = "$baseUrl/playlists/$playlistId/items/$playlistItemId"
+        apiService.removeFromPlaylist(url, token)
     }
 }

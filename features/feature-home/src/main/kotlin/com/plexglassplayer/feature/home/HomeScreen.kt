@@ -67,7 +67,7 @@ private val BackgroundScrim = Brush.verticalGradient(
     )
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onLibraryClick: () -> Unit,
@@ -83,7 +83,7 @@ fun HomeScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState() // Refresh State
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val userName by viewModel.userName.collectAsState()
 
     val playbackManager = viewModel.playbackManager
@@ -97,7 +97,10 @@ fun HomeScreen(
     // --- DIALOG STATES ---
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
+
+    // Deletion States
     var playlistToDelete by remember { mutableStateOf<Playlist?>(null) }
+    var trackToRemove by remember { mutableStateOf<Track?>(null) }
 
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
@@ -186,12 +189,12 @@ fun HomeScreen(
                                 bottom = 24.dp
                             )
                         ) {
-                            // 1. HEADER (Fixed Spacing)
+                            // 1. HEADER
                             item {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 0.dp), // Reduced bottom padding
+                                        .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 0.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -206,13 +209,13 @@ fun HomeScreen(
                                 }
                             }
 
-                            // 2. GREETING (Fixed Spacing)
+                            // 2. GREETING
                             item {
                                 Text(
                                     text = "${getGreeting()}, $userName",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                                     color = TextPrimary.copy(alpha = 0.8f),
-                                    modifier = Modifier.padding(start = 20.dp, bottom = 24.dp) // Removed top padding
+                                    modifier = Modifier.padding(start = 20.dp, bottom = 24.dp)
                                 )
                             }
 
@@ -282,7 +285,7 @@ fun HomeScreen(
                                 }
                             }
 
-                            // 5. YOUR PLAYLISTS (With New Button & Long Press)
+                            // 5. YOUR PLAYLISTS
                             item {
                                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -418,6 +421,32 @@ fun HomeScreen(
             )
         }
 
+        // --- REMOVE SONG FROM PLAYLIST DIALOG ---
+        if (trackToRemove != null) {
+            AlertDialog(
+                onDismissRequest = { trackToRemove = null },
+                title = { Text("Remove Song?", color = TextPrimary) },
+                text = {
+                    Text("Remove '${trackToRemove?.title}' from this playlist?", color = TextSecondary)
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            trackToRemove?.let { viewModel.removeTrackFromPlaylist(it) }
+                            trackToRemove = null
+                        }
+                    ) { Text("Remove", color = Color.Red) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { trackToRemove = null }) {
+                        Text("Cancel", color = AccentMint)
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E),
+                titleContentColor = TextPrimary
+            )
+        }
+
         // --- PLAYLIST BOTTOM SHEET ---
         val state = uiState
         if (state is HomeUiState.Success && state.selectedPlaylist != null) {
@@ -455,9 +484,10 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            viewModel.playFromPlaylist(index)
-                                        }
+                                        .combinedClickable(
+                                            onClick = { viewModel.playFromPlaylist(index) },
+                                            onLongClick = { trackToRemove = track } // Long press to remove song
+                                        )
                                         .padding(horizontal = 20.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -555,7 +585,6 @@ private fun RecentlyPlayedCard(track: Track, onClick: () -> Unit) {
     }
 }
 
-// --- MIX CARD WITH LONG CLICK ---
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MixCard(

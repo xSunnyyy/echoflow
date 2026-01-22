@@ -31,16 +31,11 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    // --- NEW: Refresh State ---
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
         loadTracks()
-    }
-
-    fun updateUserName(newName: String) {
-        _userName.value = newName
     }
 
     fun loadTracks() {
@@ -50,7 +45,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // --- NEW: Refresh Function (Keeps current UI while loading) ---
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
@@ -81,6 +75,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // ... (Keep existing methods: playTrack, openPlaylist, etc. They are fine)
+
     fun playTrack(track: Track) {
         viewModelScope.launch {
             try {
@@ -88,13 +84,11 @@ class HomeViewModel @Inject constructor(
                 if (state is HomeUiState.Success) {
                     val allTracks = state.allTracks
                     val indexInAll = allTracks.indexOfFirst { it.id == track.id }
-
                     val (tracksToPlay, startIndex) = if (indexInAll != -1) {
                         allTracks to indexInAll
                     } else {
                         (listOf(track) + allTracks) to 0
                     }
-
                     val queueItems = playbackRepository.convertTracksToQueue(tracksToPlay)
                     playbackManager.playTracks(queueItems, startIndex)
                 }
@@ -142,10 +136,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val allTracks = (_uiState.value as? HomeUiState.Success)?.allTracks
             val firstTrack = allTracks?.firstOrNull()
-
             if (firstTrack != null) {
                 libraryRepository.createPlaylist(name, firstTrack)
-                refresh() // Refresh list after create
+                refresh()
             }
         }
     }
@@ -154,15 +147,31 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 libraryRepository.deletePlaylist(playlist.id)
-                // Remove locally instantly for speed
                 _uiState.update { currentState ->
                     if (currentState is HomeUiState.Success) {
                         currentState.copy(playlists = currentState.playlists.filter { it.id != playlist.id })
                     } else currentState
                 }
-                refresh() // Full sync
+                refresh()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to delete playlist")
+            }
+        }
+    }
+
+    fun removeTrackFromPlaylist(track: Track) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            if (currentState is HomeUiState.Success && currentState.selectedPlaylist != null) {
+                try {
+                    libraryRepository.removeTrackFromPlaylist(currentState.selectedPlaylist.id, track.id)
+                    val updatedTracks = currentState.selectedPlaylistTracks.filter { it.id != track.id }
+                    _uiState.update {
+                        (it as HomeUiState.Success).copy(selectedPlaylistTracks = updatedTracks)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to remove track from playlist")
+                }
             }
         }
     }
