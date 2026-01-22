@@ -28,7 +28,8 @@ data class Track(
     val durationMs: Long,
     val trackNumber: Int?,
     val artUrl: String?,
-    val streamKey: String // Plex key/path needed to build play URL
+    val streamKey: String, // Plex key/path needed to build play URL
+    val playlistItemId: String? = null // Playlist item ID for deletion (only set when track is from a playlist)
 )
 
 @Serializable

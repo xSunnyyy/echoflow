@@ -106,9 +106,9 @@ class LibraryRepository @Inject constructor(
 
         response.container.metadata.map { dto ->
             val track = dto.toModel()
-            // Map the playlist item ID (dto.id) to track.id so deletion works
+            // Store the playlist item ID separately to preserve the actual track ID
             track.copy(
-                id = dto.id?.toString() ?: track.id,
+                playlistItemId = dto.id?.toString(),
                 artUrl = getAbsoluteUrl(track.artUrl, baseUrl, token)
             )
         }
